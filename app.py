@@ -25,13 +25,13 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
 
     baseUrl = f"https://xtrapapers.co/papers/caie/o-level/{subjectNameFormatted}-{subjectCodeFormatted}/{examinationYearFormatted}-{examinationSeriesFormatted}/{subjectCodeFormatted}_{shortenedCodeFormatted}_{fileTypeFormatted}_{variantFormatted}.pdf"
 
-    fileName = f"{subjectCodeFormatted}_{shortenedCodeFormatted}_{fileTypeFormatted}_{variantFormatted}.pdf"
+    fileName = f"{subjectNameFormatted}_{subjectCodeFormatted}_{examinationYearFormatted}_{examinationSeriesFormatted}_{shortenedCodeFormatted}_{variantFormatted}_{fileTypeFormatted}.pdf"
 
     downloadURL = f"{baseUrl}/download"
 
     currentDir = os.path.dirname(os.path.abspath(__file__))
 
-    folderName = "uploads"
+    folderName = "files"
 
     mainFolderOutputPath = Path(os.path.join(currentDir, folderName))
 
@@ -47,12 +47,12 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
     if msFolderOutputPath.is_dir():
         pass
     else:
-        os.mkdir("uploads/ms")
+        os.mkdir("files/ms")
 
     if qpFolderOutputPath.is_dir():
         pass
     else:
-        os.mkdir("uploads/qp")
+        os.mkdir("files/qp")
 
     outputPath = os.path.join(currentDir, folderName, fileTypeFormatted, fileName)
 
@@ -68,8 +68,39 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
                 if chunk:
                     file.write(chunk)
 
-        print(f"Successfully Fetched {fileName}. Saved at: {outputPath}")
+        print(f"Successfully Fetched {fileName}.")
     except Exception as e:
         print(f"An error occured: {e}")
 
-fetchFile("PhySiCs", "5054", "2025", "oct-nov", "w25", "11", fileType="Ms")
+def getAllPresentFiles(targetType):
+    dirPath = f"files/{targetType}"
+
+    if targetType == "ms":
+        fileType = "Mark Scheme"
+    elif targetType == "qp":
+        fileType = "Question Paper"
+    else:
+        fileType = "Error"
+
+    fileNames = []
+
+    for file in os.listdir(dirPath):
+        formattedData = file.split("_")
+        subjectName = formattedData[0].capitalize()
+        subjectCode = int(formattedData[1])
+        examinationYear = int(formattedData[2])
+        examinationSeries = formattedData[3]
+        formattedExamSeriesArr = examinationSeries.split("-")
+        formattedExamSeriesStr = formattedExamSeriesArr[0].capitalize() + " " + formattedExamSeriesArr[1].capitalize()
+        examVariant = int(formattedData[5])
+
+        print(f"\nSubject: {subjectName}\nSubject Code: {subjectCode}\nExamination Year: {examinationYear}\nExamination Series: {formattedExamSeriesStr}\nExam Variant: {examVariant}\nFile Type: {fileType}\n")
+        
+
+# fetchFile("PhySiCs", "5054", "2025", "may-june", "s25", "11", fileType="qp")
+# fetchFile("PhySiCs", "5054", "2025", "may-june", "s25", "12", fileType="ms")
+# fetchFile("PhySiCs", "5054", "2024", "oct-nov", "w24", "11", fileType="qp")
+# fetchFile("PhySiCs", "5054", "2024", "oct-nov", "w24", "12", fileType="ms")
+
+getAllPresentFiles("ms")
+getAllPresentFiles("qp")
