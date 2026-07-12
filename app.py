@@ -1,4 +1,5 @@
 import requests, os
+from pathlib import Path
 
 example = "https://xtrapapers.co/papers/caie/o-level/physics-5054/2024-may-june/5054_s24_ms_12.pdf"
 
@@ -30,7 +31,32 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
 
     currentDir = os.path.dirname(os.path.abspath(__file__))
 
-    outputPath = os.path.join(currentDir, fileName)
+    folderName = "uploads"
+
+    mainFolderOutputPath = Path(os.path.join(currentDir, folderName))
+
+    msFolderOutputPath = Path(os.path.join(currentDir, folderName, "ms"))
+
+    qpFolderOutputPath = Path(os.path.join(currentDir, folderName, "qp"))
+
+    if mainFolderOutputPath.is_dir():
+        pass
+    else:
+        os.mkdir(folderName)
+    
+    if msFolderOutputPath.is_dir():
+        pass
+    else:
+        os.mkdir("uploads/ms")
+
+    if qpFolderOutputPath.is_dir():
+        pass
+    else:
+        os.mkdir("uploads/qp")
+
+    outputPath = os.path.join(currentDir, folderName, fileTypeFormatted, fileName)
+
+    # print(outputPath)
 
     try:
         response = requests.get(downloadURL, headers=headers, stream=True)
@@ -46,4 +72,4 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
     except Exception as e:
         print(f"An error occured: {e}")
 
-# fetchFile("PhySiCs", "5054", "2025", "oct-nov", "w25", "11", fileType="Qp")
+fetchFile("PhySiCs", "5054", "2025", "oct-nov", "w25", "11", fileType="Ms")
