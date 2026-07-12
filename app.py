@@ -1,5 +1,4 @@
 import requests, os
-from bs4 import BeautifulSoup
 
 example = "https://xtrapapers.co/papers/caie/o-level/physics-5054/2024-may-june/5054_s24_ms_12.pdf"
 
