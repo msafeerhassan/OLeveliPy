@@ -68,9 +68,9 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
                 if chunk:
                     file.write(chunk)
 
-        print(f"Successfully Fetched {fileName}.")
+        return True, outputPath
     except Exception as e:
-        print(f"An error occured: {e}")
+        return False, e
 
 def getAllPresentFiles(targetType):
     dirPath = f"files/{targetType}"
@@ -94,7 +94,7 @@ def getAllPresentFiles(targetType):
         formattedExamSeriesStr = formattedExamSeriesArr[0].capitalize() + " " + formattedExamSeriesArr[1].capitalize()
         examVariant = int(formattedData[5])
 
-        print(f"\nSubject: {subjectName}\nSubject Code: {subjectCode}\nExamination Year: {examinationYear}\nExamination Series: {formattedExamSeriesStr}\nExam Variant: {examVariant}\nFile Type: {fileType}\n")
+        # print(f"\nSubject: {subjectName}\nSubject Code: {subjectCode}\nExamination Year: {examinationYear}\nExamination Series: {formattedExamSeriesStr}\nExam Variant: {examVariant}\nFile Type: {fileType}\n")
 
 def checkFilePresent(subjectName: str, subjectCode, examinationYear, examinationSeries:str, shortenedCode:str, variant, fileType):
     dirPath = f"files/{fileType.lower()}"
@@ -131,7 +131,7 @@ def checkFilePresent(subjectName: str, subjectCode, examinationYear, examination
 # getAllPresentFiles("ms")
 # getAllPresentFiles("qp")
 
-if checkFilePresent("PhySiCs", "5054", "2023", "may-june", "s23", "11", fileType="qp"):
-    print("Present file")
-else:
-    print("File Absent")
+# if checkFilePresent("PhySiCs", "5054", "2023", "may-june", "s23", "11", fileType="qp"):
+#     print("Present file")
+# else:
+#     print("File Absent")
