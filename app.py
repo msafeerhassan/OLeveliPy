@@ -95,12 +95,43 @@ def getAllPresentFiles(targetType):
         examVariant = int(formattedData[5])
 
         print(f"\nSubject: {subjectName}\nSubject Code: {subjectCode}\nExamination Year: {examinationYear}\nExamination Series: {formattedExamSeriesStr}\nExam Variant: {examVariant}\nFile Type: {fileType}\n")
-        
+
+def checkFilePresent(subjectName: str, subjectCode, examinationYear, examinationSeries:str, shortenedCode:str, variant, fileType):
+    dirPath = f"files/{fileType.lower()}"
+
+    subjectNameFormatted = subjectName.lower()
+
+    subjectCodeFormatted = int(subjectCode)
+
+    examinationYearFormatted = int(examinationYear)
+
+    examinationSeriesFormatted = examinationSeries.lower()
+
+    shortenedCodeFormatted = shortenedCode.lower()
+
+    fileTypeFormatted = fileType.lower()
+
+    variantFormatted = int(variant)
+
+    targetFileName = f"{subjectNameFormatted}_{subjectCodeFormatted}_{examinationYearFormatted}_{examinationSeriesFormatted}_{shortenedCodeFormatted}_{variantFormatted}_{fileTypeFormatted}.pdf"
+
+    for file in os.listdir(dirPath):
+        if file == targetFileName:
+            return True
+        else:
+            continue
+
+    return False
 
 # fetchFile("PhySiCs", "5054", "2025", "may-june", "s25", "11", fileType="qp")
 # fetchFile("PhySiCs", "5054", "2025", "may-june", "s25", "12", fileType="ms")
 # fetchFile("PhySiCs", "5054", "2024", "oct-nov", "w24", "11", fileType="qp")
 # fetchFile("PhySiCs", "5054", "2024", "oct-nov", "w24", "12", fileType="ms")
 
-getAllPresentFiles("ms")
-getAllPresentFiles("qp")
+# getAllPresentFiles("ms")
+# getAllPresentFiles("qp")
+
+if checkFilePresent("PhySiCs", "5054", "2023", "may-june", "s23", "11", fileType="qp"):
+    print("Present file")
+else:
+    print("File Absent")
