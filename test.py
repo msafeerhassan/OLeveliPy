@@ -1,11 +1,6 @@
-from app import uploadToSupabase, downloadFromSupabase, checkExistInSupabase
+from app import pastPaperChecker, segmentAnswerScript, uploadToSupabase
 
-status, result = uploadToSupabase("mark-schemes", "test.txt", b"Hello World", "text/plain")
-
+status, result = fetchFile("PhySics", 5054, "2025", "may-june", "s25", "11", fileType="qp")
 print(status, result)
 
-print(checkExistInSupabase("mark-schemes", "test.txt"))
-
-status, data = downloadFromSupabase("mark-schemes", "test.txt")
-
-print(status, data)
+print(checkFilePresent("PhySics", 5054, "2025", "may-june", "s25", "11", "qp"))
