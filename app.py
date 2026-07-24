@@ -1,7 +1,10 @@
-import requests, os, base64, json
+import requests, os, base64, json, time
 from typing import Any
 from supabase import create_client, Client
+from supabase.lib.client_options import SyncClientOptions
 from dotenv import load_dotenv
+from PIL import Image
+import io
 
 load_dotenv()
 
@@ -14,32 +17,46 @@ aiKey = os.getenv("HCAI_KEY")
 if not supabaseUrl or not supabaseKey:
     raise RuntimeError("SUPABASE_URL and SERVICE_ROLE_KEY must be set in your environment variables file (.env)")
 
-supabase: Client = create_client(supabaseUrl, supabaseKey)
+supabase: Client = create_client(supabaseUrl, supabaseKey, options=SyncClientOptions(storage_client_timeout=60))
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-def uploadToSupabase(bucketName, destinationPath, fileBytes, contentType):
-    try:
-        supabase.storage.from_(bucketName).upload(
-            path=destinationPath,
-            file=fileBytes,
-            file_options={
-                "content-type": contentType,
-                "upsert":"true"
-            }
-        )
+def uploadToSupabase(bucketName, destinationPath, fileBytes, contentType, maxRetries=3):
+    lastError = "Unknown Error"
 
-        return True, destinationPath
-    except Exception as e:
-        return False, str(e)
+    for attempt in range(maxRetries):
+        try:
+            supabase.storage.from_(bucketName).upload(
+                path=destinationPath,
+                file=fileBytes,
+                file_options={
+                    "content-type": contentType,
+                    "upsert":"true"
+                }
+            )
 
-def downloadFromSupabase(bucketName, filePath):
-    try:
-        fileBytes = supabase.storage.from_(bucketName).download(filePath)
-        return True, fileBytes
-    except Exception as e:
-        return False, str(e)
+            return True, destinationPath
+        except Exception as e:
+            lastError = str(e)
+            if attempt < maxRetries - 1:
+                time.sleep(2 ** attempt)
+
+    return False, lastError
+
+def downloadFromSupabase(bucketName, filePath, maxRetries=3):
+    lastError = "Unknow Error"
+
+    for attempt in range(maxRetries):
+        try:
+            fileBytes = supabase.storage.from_(bucketName).download(filePath)
+            return True, fileBytes
+        except Exception as e:
+            lastError = str(e)
+            if attempt < maxRetries - 1:
+                time.sleep(2 ** attempt)
+
+    return False, lastError
 
 def checkExistInSupabase(bucketName, filePath):
     try:
@@ -73,11 +90,24 @@ def fetchFile(subjectName: str, subjectCode, examinationYear, examinationSeries:
 
     storagePath = f"{fileTypeFormatted}/{fileName}"
 
-    try:
-        response = requests.get(downloadUrl, headers=headers)
-        response.raise_for_status()
-    except Exception as e:
-        return False, str(e)
+    lastError = "Unknown Error"
+    response = None
+
+
+    for attempt in range(3):
+        try:
+            response = requests.get(downloadUrl, headers=headers, timeout=30)
+            response.raise_for_status()
+            break
+        except Exception as e:
+            lastError = str(e)
+            response = None
+
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+
+    if response is None:
+        return False, lastError
 
     uploadStatus, uploadResult = uploadToSupabase("papers", storagePath, response.content, "application/pdf")
 
@@ -105,6 +135,19 @@ def checkFilePresent(subjectName: str, subjectCode, examinationYear, examination
         return True, storagePath
 
     return False, None
+
+def compressImageBytes(imageBytes: bytes, maxDimension=1600, quality=85):
+    image = Image.open(io.BytesIO(imageBytes))
+
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
+    image.thumbnail((maxDimension, maxDimension))
+
+    outputBuff = io.BytesIO()
+    image.save(outputBuff, format="JPEG", quality=quality)
+
+    return outputBuff.getvalue()
 
 def encodeBytesToBase64Uri(fileBytes: bytes, mimeType: str):
     encodedData = base64.b64encode(fileBytes).decode("utf-8")
@@ -137,7 +180,9 @@ def pastPaperChecker(subjectName, subjectCode, examinationYear, examinationSerie
 
         assert isinstance(imageBytes, bytes)
 
-        answerImageEncoded = encodeBytesToBase64Uri(imageBytes, "image/jpeg")
+        compressedImageBytes = compressImageBytes(imageBytes)
+
+        answerImageEncoded = encodeBytesToBase64Uri(compressedImageBytes, "image/jpeg")
 
         answerImagesEncodedArr.append(answerImageEncoded)
 
@@ -259,23 +304,27 @@ def segmentAnswerScript(answerImagesPath):
 
         assert isinstance(imageBytes, bytes)
 
-        answerImageEncoded = encodeBytesToBase64Uri(imageBytes, "image/jpeg")
+        compressedImageBytes = compressImageBytes(imageBytes)
+
+        answerImageEncoded = encodeBytesToBase64Uri(compressedImageBytes, "image/jpeg")
         answerImagesEncodedArr.append(answerImageEncoded)
 
     SYSTEM_PROMPT = """
-You are looking at a sequence of images, in order, representing pages of a student's handwritten exam answer script.
+You are looking at a set of images, in no guaranteed order, representing pages of a student's handwritten exam answer script. The upload order does not necessarily match the actual page order of the document.
 
     Your Task:
-    1. Identify question numbers written by the student (e.g. "Q4", "4(a)") across the pages.
-    2. Group the images into segments, one per question, using zero-based image index (0 = first image provided, 1 = second, and so on).
-    3. A question's answer may span multiple consecutive images. A single image may contain the end of one question and the start of another; in that case, include that image index in both segments.
+    1. Identify question numbers written by the student or printed on the page (e.g. "Q4", "4(a)", a bold question number at the start of a section) across the images.
+    2. Use any printed page numbers visible on each page (commonly at the top or bottom) to determine the true document order, rather than assuming upload order is correct.
+    3. Each image in this request is immediately preceded by a text label stating its exact index (e.g. "Image index 0:"). Use these stated labels directly — do not count image position yourself, use the number given in the label.
+    4. A question's answer may span multiple images. A single image may contain the end of one question and the start of another; in that case, include that image index in both segments.
+    5. Some images may not be part of any question's answer at all (e.g. a cover page, instructions page, or blank page). Do not force these into a segment.
 
     Respond with ONLY a single valid JSON object, no markdown code fence, no preamble, no explanation outside the JSON. Use exactly this structure:
     {
         "segments": [
             {
                 "question_number": "<question number as written by student>",
-                "image_indices": [<zero-based index integers>]
+                "image_indices": [<zero-based index integers, in true reading order for this question>]
             }
         ],
         "unmatched_image_indices": [<zero-based indices of any images that don't clearly belong to a question>]
@@ -289,7 +338,11 @@ You are looking at a sequence of images, in order, representing pages of a stude
         },
     ]
 
-    for encodedImg in answerImagesEncodedArr:
+    for index, encodedImg in enumerate(answerImagesEncodedArr):
+        userContent.append({
+            "type": "text",
+            "text": f"Image index {index}:"
+        })
         userContent.append({
             "type": "image_url",
             "image_url": {
@@ -317,7 +370,7 @@ You are looking at a sequence of images, in order, representing pages of a stude
                     }
                 ]
             },
-            timeout=30
+            timeout=90
         )
 
         response.raise_for_status()
