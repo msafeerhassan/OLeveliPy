@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file
-from app import fetchFile, checkFilePresent, downloadFromSupabase
-import io, os
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase
+import io, os, uuid
 
 app = Flask(__name__)
 
@@ -68,21 +68,140 @@ def fetchFilePage():
 
 @app.route("/past-paper-checker")
 def pastPaperCheckerPage():
-    return "Past Paper Checker Page :)"
+    return render_template("pastPaperChecker.html")
 
 @app.route("/past-paper-checker/submit", methods = ['POST'])
 def pastPaperCheckerSubmit():
-    return jsonify(
-        {
-            "status": "nothing"
-        }
-    )
+    subjectName = request.form.get("subjectName")
+    subjectCode = request.form.get("subjectCode")
+    examYear = request.form.get("examinationYear")
+    examSeries = request.form.get("examinationSeries")
+    variant = request.form.get("variant")
+    questionScope = request.form.get("questionScope")
+    questionNumber = request.form.get("questionNumber")
+    uploadedFiles = request.files.getlist("answerImages")
+
+    if not all([subjectName, subjectCode, examYear, examSeries, variant, questionScope]):
+        return render_template("pastPaperChecker.html", error="All fields are required.")
+
+    assert subjectName is not None
+    assert subjectCode is not None
+    assert examYear is not None
+    assert examSeries is not None
+    assert variant is not None
+    assert questionScope is not None
+
+    if questionScope == "specific" and not questionNumber:
+        return render_template("pastPaperChecker.html", error="Please enter a question number.")
+
+
+    if not uploadedFiles:
+        return render_template("pastPaperChecker.html", error="Please upload at least one answer image.")
+
+    lastTwoDigits = str(int(examYear))[-2:]
+
+    if examSeries == "may-june":
+        shortenedCodeKey = "s"
+    else:
+        shortenedCodeKey = "w"
+
+    shortenedCode =shortenedCodeKey + lastTwoDigits
+
+    markSchemeStatus, markSchemePath = checkFilePresent(subjectName, subjectCode, examYear, examSeries, shortenedCode, variant, "ms")
+
+    if not markSchemeStatus:
+        fetchStatus, fetchResult = fetchFile(subjectName, subjectCode, examYear, examSeries, shortenedCode, variant, fileType="ms")
+
+        if not fetchStatus:
+            return render_template("pastPaperChecker.html", error=f"Failed to fetch mark scheme: {fetchResult}")
+
+        markSchemePath = fetchResult
+
+    assert isinstance(markSchemePath, str)
+
+    requestId = str(uuid.uuid4())
+    uploadedImagePaths = []
+
+    for uploadedFile in uploadedFiles:
+        destinationPath = f"{requestId}/{uploadedFile.filename}"
+        uploadStatus, uploadResult = uploadToSupabase("answer-uploads", destinationPath, uploadedFile.read(), uploadedFile.mimetype or "image/jpeg")
+
+        if not uploadStatus:
+            return render_template("pastPaperChecker.html", error=f"Failed to upload image {uploadedFile.filename}: {uploadResult}")
+
+        uploadedImagePaths.append(uploadResult)
+
+    if questionScope == "specific":
+        gradeStatus, gradeResult = pastPaperChecker(subjectName, subjectCode, examYear, examSeries, variant, questionNumber, markSchemePath, uploadedImagePaths)
+
+        if not gradeStatus:
+            return render_template("pastPaperChecker.html", error=f"Grading Failed: {gradeResult}")
+
+        return render_template("pastPaperChecker.html", result=gradeResult)
+
+    segmentStatus, segmentResult = segmentAnswerScript(uploadedImagePaths)
+
+    if not segmentStatus:
+        return render_template("pastPaperChecker.html", error=f"Segmentation Failed: {segmentResult}")
+
+    assert isinstance(segmentResult, dict)
+
+    return jsonify({
+        "status": True,
+        "segments": segmentResult["segments"],
+        "unmatchedImageIndices": segmentResult.get("unmatched_image_indices", []),
+        "imagePaths": uploadedImagePaths,
+        "markSchemePath": markSchemePath,
+        "subjectName": subjectName,
+        "subjectCode": subjectCode,
+        "examinationYear": examYear,
+        "examinationSeries": examSeries,
+        "variant": variant
+    })
 
 @app.route("/api/grade-question", methods = ["POST"])
 def apiGradeQuestion():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "status": False,
+            "result": "No JSON Data Provided."
+        }), 400
+
+    requiredFields = [
+        "subjectName",
+        "subjectCode",
+        "examinationYear",
+        "examinationSeries",
+        "variant",
+        "questionNumber",
+        "markSchemePath",
+        "answerImagesPath"
+    ]
+
+    for field in requiredFields:
+        if field not in data:
+            return jsonify({
+                "status": False,
+                "result": f"Missing Required Field: {field}"
+            }), 400
+
+    gradeStatus, gradeResult = pastPaperChecker(
+        data["subjectName"],
+        data["subjectCode"],
+        data["examinationYear"],
+        data["examinationSeries"],
+        data["variant"],
+        data["questionNumber"],
+        data["markSchemePath"],
+        data["answerImagesPath"]
+    )
+
     return jsonify(
         {
-            "status": "everything"
+            "status": gradeStatus,
+            "result": gradeResult
         }
     )
 

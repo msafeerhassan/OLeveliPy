@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %} - Past Paper Checker {% endblock %}
+
+{% block content %}
+
+<h1>Get Solved Past Papers Checked by AI</h1>
+
+{% if error %}
+<p style="color: red;"><strong>{{ error }}</strong></p>
+{% endif %}
+
+{% if result %}
+<div>
+    <h2>Question {{ result.question_number_requested }}: {{ result.marks_awarded }} / {{ result.marks_total }}</h2>
+    {% if result.question_number_mismatch_warning %}
+    <p style="color: orange;"><strong>{{ result.question_number_mismatch_warning }}</strong></p>
+    {% endif %}
+    <p><strong>Transcription:</strong> {{ result.transcription }}</p>
+    <ul>
+        {% for point in result.breakdown %}
+        <li>[{{ point.status }}] {{ point.point }} - {{ point.reasoning }}</li>
+        {% endfor %}
+    </ul>
+    <p><strong>Feedback:</strong> {{ result.overall_feedback }}</p>
+</div>
+{% endif %}
+
+<form action="/past-paper-checker/submit" method="POST" enctype="multipart/form-data" id="pastPaperExaminerForm">
+    <label for="subjectName">Subject Name:</label>
+    <br>
+    <input type="text" name="subjectName" id="subjectName" placeholder="Physics" required>
+    <br><br>
+    <label for="subjectCode">Subject Code:</label>
+    <br>
+    <input type="number" name="subjectCode" id="subjectCode" placeholder="5054" required>
+    <br><br>
+    <label for="examinationYear">Examination Year:</label>
+    <br>
+    <input type="number" name="examinationYear" id="examinationYear" placeholder="2025" required>
+    <br><br>
+    <label for="examinationSeries">Examination Series:</label>
+    <br>
+    <select name="examinationSeries" id="examinationSeries">
+        <option value="may-june">May/June</option>
+        <option value="oct-nov">October/November</option>
+    </select><br><br>
+
+    <label for="variant">Variant:</label><br>
+    <input type="number" name="variant" value="11" required id="variant"><br><br>
+    <label>Question Scope:</label><br>
+    <input type="radio" name="questionScope" value="specfic" checked id="scopeSpecific">
+    <label for="scopeSpecific">Specific Question</label><br>
+    <input type="radio" name="questionScope" id="scopeAll" value="all">
+    <label for="scopeAll">All Questions</label><br><br>
+
+    <label for="questionNumber">Question Number (only required for specific question):</label>
+    <br>
+    <input type="text" name="questionNumber" placeholder="e.g. 4 or 4(b)(ii)" id="questionNumber">
+    <br><br>
+
+    <label for="answerImages">Upload Answer Images:</label><br>
+    <input type="file" name="answerImages" id="answerImages" accept="image/*" multiple required> <br><br>
+
+    <button type="submit">Examine and Mark!</button>
+</form>
+
+<p id="progressStatus"></p>
+<div id="allQuestionsResults"></div>
+
+<script src="{{ url_for('static', filename='js/gradeAllQuestions.js') }}"></script>
+{% endblock %}
