@@ -1,8 +1,27 @@
-from flask import Flask, render_template, request, jsonify, send_file
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser
 import io, os, uuid
+from functools import wraps
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
+
+secretKey = os.getenv("FLASK_SECRET_KEY")
+
+if not secretKey:
+    raise RuntimeError("FLASK_SECRET_KEY must be set in your .env file")
+
+app.secret_key = secretKey
+
+def loginRequired(routeFunc):
+    @wraps(routeFunc)
+    def wrappedFunc(*args, **kwargs):
+        if "userId" not in session:
+            return redirect(url_for("loginPage"))
+        return routeFunc(*args, **kwargs)
+    return wrappedFunc
 
 @app.route("/")
 def homePage():
@@ -67,10 +86,12 @@ def fetchFilePage():
     )
 
 @app.route("/past-paper-checker")
+@loginRequired
 def pastPaperCheckerPage():
     return render_template("pastPaperChecker.html")
 
 @app.route("/past-paper-checker/submit", methods = ['POST'])
+@loginRequired
 def pastPaperCheckerSubmit():
     subjectName = request.form.get("subjectName")
     subjectCode = request.form.get("subjectCode")
@@ -160,6 +181,7 @@ def pastPaperCheckerSubmit():
     })
 
 @app.route("/api/grade-question", methods = ["POST"])
+@loginRequired
 def apiGradeQuestion():
     data = request.get_json()
 
@@ -204,6 +226,57 @@ def apiGradeQuestion():
             "result": gradeResult
         }
     )
+
+@app.route("/signup", methods=["GET", "POST"])
+def signUpPage():
+    if request.method == "GET":
+        return render_template("signup.html")
+
+    email = request.form.get("email")
+    password = request.form.get("password")
+
+    if not email or not password:
+        return render_template("signup.html", error="Email and Password are both required.")
+
+    signUpStatus, signUpResult = signUpUser(email, password)
+
+    if not signUpStatus:
+        return render_template("signup.html", error=signUpResult)
+
+    assert isinstance(signUpResult, dict)
+
+    session["userId"] = signUpResult["userId"]
+    session["userEmail"] = email
+
+    return redirect(url_for("homePage"))
+
+@app.route("/login", methods=["GET", "POST"])
+def loginPage():
+    if request.method == "GET":
+        return render_template("login.html")
+
+    email = request.form.get("email")
+    password = request.form.get("password")
+
+    if not email or not password:
+        return render_template("login.html", error="Email and Password are both required.")
+
+    signInStatus, signInResult = signInUser(email, password)
+
+    if not signInStatus:
+        return render_template("login.html", error=signInResult)
+
+    assert isinstance(signInResult, dict)
+
+    session["userId"] = signInResult["userId"]
+    session["userEmail"] = email
+
+    return redirect(url_for("homePage"))
+
+@app.route("/logout", methods=["POST"])
+def logoutRoute():
+    session.clear()
+    return redirect(url_for("homePage"))
 
 if __name__ == "__main__":
     app.run(debug=True)

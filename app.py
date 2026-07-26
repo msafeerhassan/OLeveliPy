@@ -398,3 +398,85 @@ You are looking at a set of images, in no guaranteed order, representing pages o
         return False, f"Model didn't returned valid JSON Response: {e}. Raw Response: {content}"
 
     return True, resultJson
+
+def signUpUser(email, password):
+    try:
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password
+        })
+
+        if response.user is None or response.session is None:
+            return False, "Sign Up Failed. Please Try Again!"
+
+        return True, {
+            "userId": response.user.id,
+            "accessToken": response.session.access_token
+        }
+    except Exception as e:
+        return False, str(e)
+
+def signInUser(email, password):
+    try:
+        response = supabase.auth.sign_in_with_password(
+            {
+                "email": email,
+                "password": password
+            }
+        )
+
+        if response.user is None or response.session is None:
+            return False, "Invalid Email or Password."
+
+        return True, {
+            "userId": response.user.id,
+            "accessToken": response.session.access_token
+        }
+
+    except Exception as e:
+        return False, str(e)
+
+def insertGradingHistory(userId, subjectName, subjectCode, examinationYear, examinationSeries, variant, questionNumber, resultJson):
+    try:
+        supabase.table("grading_history").insert({
+            "user_id": userId,
+            "subject_name": subjectName,
+            "subject_code": str(subjectCode),
+            "examination_year": str(examinationYear),
+            "examination_series": examinationSeries,
+            "variant": str(variant),
+            "question_number": str(questionNumber),
+            "marks_awarded": resultJson.get("marks_awarded"),
+            "marks_total": resultJson.get("marks_total"),
+            "result_json": resultJson
+        }).execute
+
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def getGradingHistory(userId, limit=50):
+    try:
+        response = supabase.table("grading_history").select("*").eq("user_id", userId).order("created_at", desc=True).limit(limit).execute()
+        return True, response.data
+    except Exception as e:
+        return False, str(e)
+
+def insertChatMessage(userId, role, content):
+    try:
+        supabase.table("coach_chat_history").insert({
+            "user_id": userId,
+            "role": role,
+            "content": content
+        }).execute()
+
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def getChatHistory(userId, limit=50):
+    try:
+        response = supabase.table("coach_chat_history").select("*").eq("user_id", userId).order("created_at", desc=False).limit(limit).execute()
+        return True, response.data
+    except Exception as e:
+        return False, str(e)
