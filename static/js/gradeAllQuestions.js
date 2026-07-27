@@ -29,7 +29,14 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        const submitData = await submitResponse.json();
+        let submitData;
+
+        try {
+            submitData = await submitResponse.json();
+        } catch (err) {
+            progressStatus.textContent = `Failed to parse server response (status ${submitResponse.status}): ${err}`;
+            return;
+        }
 
         if (!submitData.status) {
             progressStatus.textContent = "Failed: " + submitData.result;

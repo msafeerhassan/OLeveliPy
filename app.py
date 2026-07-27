@@ -239,32 +239,43 @@ You are an experienced {subjectName} examiner grading a student's handwritten an
             }
         })
 
-    try:
-        response = requests.post(
-            "https://ai.hackclub.com/proxy/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {aiKey}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": aiModel,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": SYSTEM_PROMPT
-                    },
-                    {
-                        "role": "user",
-                        "content": userContent
-                    }
-                ]
-            },
-            timeout=60
-        )
+    lastError = "Unknown Error"
+    response = None
 
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return False, f"Hack Club AI API Request Failed: {e}"
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                "https://ai.hackclub.com/proxy/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {aiKey}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": aiModel,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": SYSTEM_PROMPT
+                        },
+                        {
+                            "role": "user",
+                            "content": userContent
+                        }
+                    ]
+                },
+                timeout=60
+            )
+
+            response.raise_for_status()
+            break
+        except requests.exceptions.RequestException as e:
+            lastError = f"Hack Club AI API Request Failed: {e}"
+            response = None
+
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    if response is None:
+        return False, lastError
 
     try:
         responseData = response.json()
@@ -350,32 +361,42 @@ You are looking at a set of images, in no guaranteed order, representing pages o
             }
         })
 
-    try:
-        response = requests.post(
-            "https://ai.hackclub.com/proxy/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {aiKey}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": aiModel,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": SYSTEM_PROMPT
-                    },
-                    {
-                        "role": "user",
-                        "content": userContent
-                    }
-                ]
-            },
-            timeout=90
-        )
+    lastError = "Unknown Error"
+    response = None
 
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return False, f"Hack Club AI API Request Failed: {e}"
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                "https://ai.hackclub.com/proxy/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {aiKey}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": aiModel,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": SYSTEM_PROMPT
+                        },
+                        {
+                            "role": "user",
+                            "content": userContent
+                        }
+                    ]
+                },
+                timeout=90
+            )
+
+            response.raise_for_status()
+            break
+        except requests.exceptions.RequestException as e:
+            lastError = f"Hack Club AI API Request Failed: {e}"
+            response = None
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    if response is None:
+        return False, lastError
 
     try:
         responseData = response.json()
@@ -438,7 +459,7 @@ def signInUser(email, password):
 
 def insertGradingHistory(userId, subjectName, subjectCode, examinationYear, examinationSeries, variant, questionNumber, resultJson):
     try:
-        supabase.table("grading_history").insert({
+        response = supabase.table("grading_history").insert({
             "user_id": userId,
             "subject_name": subjectName,
             "subject_code": str(subjectCode),
@@ -449,7 +470,10 @@ def insertGradingHistory(userId, subjectName, subjectCode, examinationYear, exam
             "marks_awarded": resultJson.get("marks_awarded"),
             "marks_total": resultJson.get("marks_total"),
             "result_json": resultJson
-        }).execute
+        }).execute()
+
+        if not response.data:
+            return False, f"Insert returned no data. Full response: {response}"
 
         return True, None
     except Exception as e:

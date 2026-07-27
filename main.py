@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -158,6 +158,13 @@ def pastPaperCheckerSubmit():
         if not gradeStatus:
             return render_template("pastPaperChecker.html", error=f"Grading Failed: {gradeResult}")
 
+        assert isinstance(gradeResult, dict)
+
+        historyStatus, historyError = insertGradingHistory(session["userId"], subjectName, subjectCode, examYear, examSeries, variant, questionNumber, gradeResult)
+
+        if not historyStatus:
+            print(f"Failed to insert grading history: {historyError}")
+        
         return render_template("pastPaperChecker.html", result=gradeResult)
 
     segmentStatus, segmentResult = segmentAnswerScript(uploadedImagePaths)
@@ -219,6 +226,22 @@ def apiGradeQuestion():
         data["markSchemePath"],
         data["answerImagesPath"]
     )
+
+    if gradeStatus:
+        assert isinstance(gradeResult, dict)
+        historyStatus, historyError = insertGradingHistory(
+            session["userId"],
+            data["subjectName"],
+            data["subjectCode"],
+            data["examinationYear"],
+            data["examinationSeries"],
+            data["variant"],
+            data["questionNumber"],
+            gradeResult
+        )
+
+        if not historyStatus:
+            print(f"Failed to insert grading history: {historyError}")
 
     return jsonify(
         {
