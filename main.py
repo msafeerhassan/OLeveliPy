@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -300,6 +300,18 @@ def loginPage():
 def logoutRoute():
     session.clear()
     return redirect(url_for("homePage"))
+
+@app.route("/grading-history")
+@loginRequired
+def gradingHistoryPage():
+    historyStatus, historyData = getGradingHistory(session["userId"])
+
+    if not historyStatus:
+        return render_template("gradingHistory.html", error=f"Failed to load grading history: {historyData}")
+
+    assert isinstance(historyData, list)
+
+    return render_template("gradingHistory.html", history=historyData)
 
 if __name__ == "__main__":
     app.run(debug=True)

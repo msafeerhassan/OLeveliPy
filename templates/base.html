@@ -11,6 +11,7 @@
     <a href="/fetch-file">Download File</a>
     <a href="/past-paper-checker">Past Paper Checker</a>
     {% if session.userId %}
+    <a href="/grading-history">Grading History</a>
     <span>{{ session.userEmail }}</span>
     <form action="/logout" method="POST" style="display: inline;">
         <button type="submit">Log Out</button>

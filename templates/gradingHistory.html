@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %} - Grading History{% endblock %}
+
+{% block content %}
+
+<h1>Your Grading History</h1>
+
+{% if error %}
+<p style="color: red;"><strong>{{ error }}</strong></p>
+{% endif %}
+
+{% if history %}
+<table border="1" cellpadding="6">
+    <tr>
+        <th>Date</th>
+        <th>Subject</th>
+        <th>Exam</th>
+        <th>Question</th>
+        <th>Score</th>
+    </tr>
+    {% for entry in history %}
+    <tr>
+        <td>{{ entry.created_at }}</td>
+        <td>{{ entry.subject_name }} ({{ entry.subject_code }})</td>
+        <td>{{ entry.examination_year }} {{ entry.examination_series }}, variant {{ entry.variant }}</td>
+        <td>{{ entry.question_number }}</td>
+        <td>{{ entry.marks_awarded }} / {{ entry.marks_total }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No grading history yet. Head to <a href="/past-paper-checker">Past Paper Checker</a> to get started.</p>
+{% endif %}
+
+{% endblock %}
