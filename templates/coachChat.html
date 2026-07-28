@@ -4,9 +4,23 @@
 {% block content %}
 
 <h1>Chat with Your AI Coach</h1>
+
+{% if error %}
 <p style="color: red;"><strong>{{ error }}</strong></p>
 {% endif %}
 
-<p>Coming soon :)</p>
+<div id="chatMessages" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+    {% for msg in chatHistory %}
+    <div class="chat-message chat-{{ msg.role }}">
+        <strong>{{ "You" if msg.role == "user" else "Coach" }}:</strong> {{ msg.content }}
+    </div>
+    {% endfor %}
+</div>
 
+<form id="chatForm">
+    <input type="text" placeholder="Ask your coach anything..." required autocomplete="off" id="chatInput">
+    <button type="submit">Send</button>
+</form>
+
+<script src="{{ url_for('static', filename='js/coachChat.js') }}"></script>
 {% endblock %}

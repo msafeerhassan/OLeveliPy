@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -312,6 +312,38 @@ def gradingHistoryPage():
     assert isinstance(historyData, list)
 
     return render_template("gradingHistory.html", history=historyData)
+
+@app.route("/coach-chat")
+@loginRequired
+def coachChatPage():
+    chatStatus, chatHistoryData = getChatHistory(session["userId"])
+
+    if not chatStatus:
+        chatHistoryData = []
+
+    return render_template("coachChat.html", chatHistory=chatHistoryData)
+
+@app.route("/api/coach-chat", methods=["POST"])
+@loginRequired
+def apiCoachChat():
+    data = request.get_json()
+
+    if not data or "message" not in data:
+        return jsonify(
+            {
+                "status": False,
+                "result": "No Input Message Provided :("
+            }
+        ), 400
+
+    chatStatus, chatResult = coachChat(session["userId"], data["message"])
+
+    return jsonify(
+        {
+            "status": chatStatus,
+            "result": chatResult
+        }
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

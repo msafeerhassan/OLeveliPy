@@ -488,11 +488,14 @@ def getGradingHistory(userId, limit=50):
 
 def insertChatMessage(userId, role, content):
     try:
-        supabase.table("coach_chat_history").insert({
+        response = supabase.table("coach_chat_history").insert({
             "user_id": userId,
             "role": role,
             "content": content
         }).execute()
+
+        if not response.data:
+            return False, f"Insert returned no data. Raw Response: {response}"
 
         return True, None
     except Exception as e:
@@ -504,3 +507,107 @@ def getChatHistory(userId, limit=50):
         return True, response.data
     except Exception as e:
         return False, str(e)
+
+def coachChat(userId, userMsg):
+    if not aiKey:
+        return False, "Hack Club AI API Key Missing :("
+
+    gradingHistoryStatus, gradingHistoryData = getGradingHistory(userId, limit=15)
+
+    if not gradingHistoryStatus:
+        gradingHistoryData = []
+
+    chatHistoryStatus, chatHistoryData = getChatHistory(userId, limit=50)
+
+    if not chatHistoryStatus:
+        chatHistoryData = []
+
+    if gradingHistoryData:
+        summaryLines = []
+
+        for entry in gradingHistoryData:
+            assert isinstance(entry, dict)
+            summaryLines.append(
+                f"- {entry.get('subject_name')} {entry.get('examination_year')} {entry.get('examination_series')} "
+                f"Q{entry.get('question_number')}: {entry.get('marks_awarded')}/{entry.get('marks_total')}"
+            )
+        gradingSummary = "\n".join(summaryLines)
+    else:
+        gradingSummary = "No past graded questions available yet."
+
+    SYSTEM_PROMPT = f"""
+You are a highly professional, expert O Level tutor and examiner, acting as a personal study coach for this student. Here's the student's recent grading history (most recent first). Reference specifically subjects, question numbers and scores from this list by name whenever it's relevant to the conversation rather than speaking in vague generalities: {gradingSummary}. Be encouraging but honest, direct, short, concise. Use correct O Level curriculum terminology and give concrete actionable study advice. If the student's history shows a pattern of losing marks on particular topic, point it out directly and specifically.
+Write in plain, unformatted prose only - don't use markdown syntax of anykind - no asterisks for bold or italics, no headers, no bullet-point markers like "-" or "*", no numbered list formatting. If you want to list multiple points, write them as separate plain sentences or separate paragraphs instead.
+"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT
+        }
+    ]
+
+    assert isinstance(chatHistoryData, list)
+
+    for pastMsg in chatHistoryData:
+        messages.append(
+            {
+                "role": pastMsg["role"],
+                "content": pastMsg["content"]
+            }
+        )
+
+    messages.append(
+        {
+            "role": "user",
+            "content": userMsg
+        }
+    )
+
+    lastError = "Unknown Error"
+    response = None
+
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                "https://ai.hackclub.com/proxy/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {aiKey}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": aiModel,
+                    "messages": messages
+                },
+                timeout=60
+            )
+
+            response.raise_for_status()
+            break
+        except requests.exceptions.RequestException as e:
+            lastError = f"Hack Club AI API Request Failed: {e}"
+            response = None
+
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+
+    if response is None:
+        return False, lastError
+
+    try:
+        responseData = response.json()
+        reply = responseData["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError) as e:
+        return False, f"Unexpected API Response Strucutre: {e}"
+
+    insertStatus, insertError = insertChatMessage(userId, "user", userMsg)
+
+    if not insertStatus:
+        print(f"Failed to save user chat message: {insertError}")
+
+    insertStatus, insertError = insertChatMessage(userId, "assistant", reply)
+
+    if not insertStatus:
+        print(f"Failed to save assistant chat message: {insertError}")
+
+    return True, reply
