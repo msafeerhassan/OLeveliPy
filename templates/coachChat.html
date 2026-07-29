@@ -22,5 +22,10 @@
     <button type="submit">Send</button>
 </form>
 
+<script>
+    window.prefillMessage = {{ prefillMessage | tojson }};
+    window.aboutEntryId = {{ aboutEntryId | tojson }};
+</script>
+
 <script src="{{ url_for('static', filename='js/coachChat.js') }}"></script>
 {% endblock %}

@@ -17,6 +17,7 @@
         <th>Exam</th>
         <th>Question</th>
         <th>Score</th>
+        <th></th>
     </tr>
     {% for entry in history %}
     <tr>
@@ -25,6 +26,7 @@
         <td>{{ entry.examination_year }} {{ entry.examination_series }}, variant {{ entry.variant }}</td>
         <td>{{ entry.question_number }}</td>
         <td>{{ entry.marks_awarded }} / {{ entry.marks_total }}</td>
+        <td><a href="/coach-chat?about={{ entry.id }}">Ask Coach</a></td>
     </tr>
     {% endfor %}
 </table>

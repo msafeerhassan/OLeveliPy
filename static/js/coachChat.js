@@ -3,6 +3,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const input = document.getElementById("chatInput");
     const msgContainer = document.getElementById("chatMessages");
 
+    if (window.prefillMessage) {
+        input.value = window.prefillMessage;
+        form.dispatchEvent(new Event("submit"));
+    }
+
     function appendMsg(role, content) {
         const div = document.createElement("div");
         div.className = `chat-message chat-${role}`;
@@ -44,7 +49,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 body: JSON.stringify(
                     {
-                        message: msg
+                        message: msg,
+                        aboutEntryId: window.aboutEntryId || null
                     }
                 )
             });

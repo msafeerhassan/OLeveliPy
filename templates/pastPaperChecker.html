@@ -22,6 +22,9 @@
         {% endfor %}
     </ul>
     <p><strong>Feedback:</strong> {{ result.overall_feedback }}</p>
+    {% if historyEntryId %}
+    <p><a href="/coach-chat?about={{ historyEntryId }}">Ask my coach about this</a></p>
+    {% endif %}
 </div>
 {% endif %}
 

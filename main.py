@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -160,12 +160,12 @@ def pastPaperCheckerSubmit():
 
         assert isinstance(gradeResult, dict)
 
-        historyStatus, historyError = insertGradingHistory(session["userId"], subjectName, subjectCode, examYear, examSeries, variant, questionNumber, gradeResult)
+        historyStatus, historyResult = insertGradingHistory(session["userId"], subjectName, subjectCode, examYear, examSeries, variant, questionNumber, gradeResult)
 
         if not historyStatus:
-            print(f"Failed to insert grading history: {historyError}")
+            print(f"Failed to insert grading history: {historyResult}")
         
-        return render_template("pastPaperChecker.html", result=gradeResult)
+        return render_template("pastPaperChecker.html", result=gradeResult, historyEntryId=historyResult if historyStatus else None)
 
     segmentStatus, segmentResult = segmentAnswerScript(uploadedImagePaths)
 
@@ -331,7 +331,24 @@ def coachChatPage():
     if not chatStatus:
         chatHistoryData = []
 
-    return render_template("coachChat.html", chatHistory=chatHistoryData)
+    aboutEntryId = request.args.get("about")
+    preFillMsg = None
+
+    if aboutEntryId:
+        entryStatus, entryData = getGradingHistoryEntry(session["userId"], aboutEntryId)
+
+        if entryStatus:
+            assert isinstance(entryData, dict)
+            marksAwarded = entryData.get("marks_awarded")
+            marksTotal = entryData.get("marks_total")
+
+            examDesc = f"{entryData.get('subject_name')} {entryData.get('examination_year')} {entryData.get('examination_series')} question {entryData.get('question_number')}"
+
+            if marksAwarded is not None and marksTotal is not None and marksAwarded >= marksTotal:
+                preFillMsg = f"Can you please review my answer on {examDesc} (scored full marks, {marksAwarded}/{marksTotal}) and lemme know if there's anything I could do even better next time?"
+            else:
+                preFillMsg = f"Can you please help me understand what I got wrong on {examDesc} (scored {marksAwarded}/{marksTotal})?"
+    return render_template("coachChat.html", chatHistory=chatHistoryData, aboutEntryId=aboutEntryId, prefillMessage=preFillMsg)
 
 @app.route("/api/coach-chat", methods=["POST"])
 @loginRequired
@@ -346,7 +363,7 @@ def apiCoachChat():
             }
         ), 400
 
-    chatStatus, chatResult = coachChat(session["userId"], data["message"])
+    chatStatus, chatResult = coachChat(session["userId"], data["message"], data.get('aboutEntryId'))
 
     return jsonify(
         {

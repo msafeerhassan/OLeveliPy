@@ -483,7 +483,7 @@ def insertGradingHistory(userId, subjectName, subjectCode, examinationYear, exam
         if not response.data:
             return False, f"Insert returned no data. Full response: {response}"
 
-        return True, None
+        return True, response.data[0]["id"]
     except Exception as e:
         return False, str(e)
 
@@ -491,6 +491,17 @@ def getGradingHistory(userId, limit=50):
     try:
         response = supabase.table("grading_history").select("*").eq("user_id", userId).order("created_at", desc=True).limit(limit).execute()
         return True, response.data
+    except Exception as e:
+        return False, str(e)
+
+def getGradingHistoryEntry(userId, entryId):
+    try:
+        response = supabase.table("grading_history").select("*").eq("user_id", userId).eq("id", entryId).limit(1).execute()
+
+        if not response.data:
+            return False, "Entry not found :("
+
+        return True, response.data[0]
     except Exception as e:
         return False, str(e)
 
@@ -562,7 +573,7 @@ def getChatHistory(userId, limit=50):
     except Exception as e:
         return False, str(e)
 
-def coachChat(userId, userMsg):
+def coachChat(userId, userMsg, aboutEntryId=None):
     if not aiKey:
         return False, "Hack Club AI API Key Missing :("
 
@@ -570,6 +581,30 @@ def coachChat(userId, userMsg):
 
     if not gradingHistoryStatus:
         gradingHistoryData = []
+
+    specificEntryContext = ""
+
+    if aboutEntryId:
+        entryStatus, entryData = getGradingHistoryEntry(userId, aboutEntryId)
+
+        if entryStatus:
+            assert isinstance(entryData, dict)
+            resultJson = entryData.get("result_json", {})
+            breakdownLines = []
+
+            for point in resultJson.get("breakdown", []):
+                breakdownLines.append(f"- {point.get('point')}: {point.get('status')} ({point.get('reasoning')})")
+
+            specificEntryContext = f"""
+The student specifically wants to discuss this question right now:
+Subject: {entryData.get('subject_name')}, Question {entryData.get('question_number')}, Score: {entryData.get('marks_awarded')}/{entryData.get('marks_total')}
+Transcription of their answer: {resultJson.get('transcription', 'N/A')}
+Mark Scheme Breakdown:
+{chr(10).join(breakdownLines)}
+Overall Feedback Given: {resultJson.get('overall_feedback', 'N/A')}
+
+Focus your response on this specific question unless student diverts the conversation elsewhere.
+"""
 
     chatHistoryStatus, chatHistoryData = getChatHistory(userId, limit=50)
 
@@ -591,7 +626,7 @@ def coachChat(userId, userMsg):
 
     SYSTEM_PROMPT = f"""
 You are a highly professional, expert O Level tutor and examiner, acting as a personal study coach for this student. Here's the student's recent grading history (most recent first). Reference specifically subjects, question numbers and scores from this list by name whenever it's relevant to the conversation rather than speaking in vague generalities: {gradingSummary}. Be encouraging but honest, direct, short, concise. Use correct O Level curriculum terminology and give concrete actionable study advice. If the student's history shows a pattern of losing marks on particular topic, point it out directly and specifically.
-Write in plain, unformatted prose only - don't use markdown syntax of anykind - no asterisks for bold or italics, no headers, no bullet-point markers like "-" or "*", no numbered list formatting. If you want to list multiple points, write them as separate plain sentences or separate paragraphs instead.
+Write in plain, unformatted prose only - don't use markdown syntax of anykind - no asterisks for bold or italics, no headers, no bullet-point markers like "-" or "*", no numbered list formatting. If you want to list multiple points, write them as separate plain sentences or separate paragraphs instead.{specificEntryContext}
 """
 
     messages = [
