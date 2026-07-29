@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %} - Weak Topics{% endblock %}
+
+{% block content %}
+
+<h1>Your Topic Breakdown</h1>
+
+{% if error %}
+<p style="color: red;"><strong>{{ error }}</strong></p>
+{% endif %}
+
+{% if topics %}
+<p>Sorted weakest to strongest, based on questions graded.</p>
+<table border="1" cellpadding="6">
+    <tr>
+        <th>Topic</th>
+        <th>Score</th>
+        <th>Questions Graded</th>
+    </tr>
+    {% for topic in topics %}
+    <tr>
+        <td>{{ topic.topic }}</td>
+        <td>{{ topic.percentage }}% ({{ topic.marksAwarded }}/{{ topic.marksTotal }})</td>
+        <td>{{ topic.questionCount }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No data yet - start grading questions to see breakdown here.</p>
+{% endif %}
+
+{% endblock %}

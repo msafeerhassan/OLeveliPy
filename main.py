@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 
@@ -312,6 +312,16 @@ def gradingHistoryPage():
     assert isinstance(historyData, list)
 
     return render_template("gradingHistory.html", history=historyData)
+
+@app.route("/weak-topics")
+@loginRequired
+def weakTopicsPage():
+    topicStatus, topicsData = getWeakTopics(session["userId"])
+
+    if not topicStatus:
+        return render_template("weakTopics.html", error=f"Failed to load topic analysis: {topicsData}")
+
+    return render_template("weakTopics.html", topics=topicsData)
 
 @app.route("/coach-chat")
 @loginRequired

@@ -5,8 +5,9 @@ from supabase.lib.client_options import SyncClientOptions
 from dotenv import load_dotenv
 from PIL import Image
 import io
+from operator import itemgetter
 
-load_dotenv()
+load_dotenv(override=True)
 
 aiModel = "google/gemini-3.1-flash-lite"
 
@@ -16,6 +17,9 @@ aiKey = os.getenv("HCAI_KEY")
 
 if not supabaseUrl or not supabaseKey:
     raise RuntimeError("SUPABASE_URL and SERVICE_ROLE_KEY must be set in your environment variables file (.env)")
+
+print(f"Debugging: Loaded Supabase url: {supabaseUrl}")
+print(f"Debugging: loaded service role key length = {len(supabaseKey)}, starts with {supabaseKey[:6]} and ends with {supabaseKey[-6:]}")
 
 supabase: Client = create_client(supabaseUrl, supabaseKey, options=SyncClientOptions(storage_client_timeout=60))
 headers = {
@@ -201,11 +205,14 @@ You are an experienced {subjectName} examiner grading a student's handwritten an
 
     Also, read other general instructions mentioned regarding checking paper in the mark scheme.
 
+    Also, identify the specific {subjectName} topic the question texts (e.g. "Momentum", "Electricity", "Waves", "Nervous System", "Alkanes"). Use a consistent standard O Level topic name, not an overly specific or one-off description.
+
     Respond with ONLY a single valid JSON object, no mark down code fence, no preamble, no explaination outside the JSON. Use exactly this structure:
     {{
         "question_number_requested": "{questionNumber}",
         "question_number_detected_in_image": "<question number you acutally see written, or null if unclear>",
         "question_number_mismatch_warning": "<null or a short note if detected number differs from requested>",
+        "topic": "<standard topic name for this question>",
         "transcription": "<full transcription of the handwritten answer>",
         "illegible_sections": "<null or a short note on any part you could not read>",
         "marks_awarded": <integer>,
@@ -467,6 +474,7 @@ def insertGradingHistory(userId, subjectName, subjectCode, examinationYear, exam
             "examination_series": examinationSeries,
             "variant": str(variant),
             "question_number": str(questionNumber),
+            "topic": resultJson.get("topic"),
             "marks_awarded": resultJson.get("marks_awarded"),
             "marks_total": resultJson.get("marks_total"),
             "result_json": resultJson
@@ -485,6 +493,52 @@ def getGradingHistory(userId, limit=50):
         return True, response.data
     except Exception as e:
         return False, str(e)
+
+def getWeakTopics(userId):
+    historyStatus, historyData = getGradingHistory(userId, limit=200)
+
+    if not historyStatus:
+        return False, historyData
+
+    assert isinstance(historyData, list)
+
+    topicStats = {}
+
+    for entry in historyData:
+        topic = entry.get("topic")
+        marksAwarded = entry.get("marks_awarded")
+        marksTotal = entry.get("marks_total")
+
+        if not topic or marksAwarded is None or marksTotal is None or marksTotal == 0:
+            continue
+
+        if topic not in topicStats:
+            topicStats[topic] = {
+                "marksAwarded": 0,
+                "marksTotal": 0,
+                "questionCount": 0
+            }
+
+        topicStats[topic]["marksAwarded"] += marksAwarded
+        topicStats[topic]["marksTotal"] += marksTotal
+        topicStats[topic]["questionCount"] += 1
+
+    topicList = []
+
+    for topic, stats in topicStats.items():
+        percentage = round((stats["marksAwarded"] / stats["marksTotal"]) * 100, 1)
+
+        topicList.append({
+            "topic": topic,
+            "percentage": percentage,
+            "marksAwarded": stats["marksAwarded"],
+            "marksTotal": stats["marksTotal"],
+            "questionCount": stats["questionCount"]
+        })
+
+    topicList.sort(key=lambda t: t["percentage"])
+
+    return True, topicList
 
 def insertChatMessage(userId, role, content):
     try:

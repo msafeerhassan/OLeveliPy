@@ -29,11 +29,14 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        const rawResponseText = await submitResponse.text();
+
         let submitData;
 
         try {
-            submitData = await submitResponse.json();
+            submitData = JSON.parse(rawResponseText)
         } catch (err) {
+            console.log("RAW SERVER RESPONSE:", rawResponseText)
             progressStatus.textContent = `Failed to parse server response (status ${submitResponse.status}): ${err}`;
             return;
         }
