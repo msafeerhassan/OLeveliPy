@@ -429,7 +429,9 @@ You are looking at a set of images, in no guaranteed order, representing pages o
 
 def signUpUser(email, password):
     try:
-        response = supabase.auth.sign_up({
+        authClient = create_client(supabaseUrl, supabaseKey, options=SyncClientOptions(storage_client_timeout=60))
+
+        response = authClient.auth.sign_up({
             "email": email,
             "password": password
         })
@@ -446,7 +448,8 @@ def signUpUser(email, password):
 
 def signInUser(email, password):
     try:
-        response = supabase.auth.sign_in_with_password(
+        authClient = create_client(supabaseUrl, supabaseKey, options=SyncClientOptions(storage_client_timeout=60))
+        response = authClient.auth.sign_in_with_password(
             {
                 "email": email,
                 "password": password

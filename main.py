@@ -103,7 +103,12 @@ def pastPaperCheckerSubmit():
     uploadedFiles = request.files.getlist("answerImages")
 
     if not all([subjectName, subjectCode, examYear, examSeries, variant, questionScope]):
-        return render_template("pastPaperChecker.html", error="All fields are required.")
+        return jsonify(
+            {
+                "status": False,
+                "result": "All fields are required."
+            }
+        )
 
     assert subjectName is not None
     assert subjectCode is not None
@@ -113,11 +118,21 @@ def pastPaperCheckerSubmit():
     assert questionScope is not None
 
     if questionScope == "specific" and not questionNumber:
-        return render_template("pastPaperChecker.html", error="Please enter a question number.")
+        return jsonify(
+            {
+                "status": False,
+                "result": "Please enter a question number."
+            }
+        )
 
 
     if not uploadedFiles:
-        return render_template("pastPaperChecker.html", error="Please upload at least one answer image.")
+        return jsonify(
+            {
+                "status": False,
+                "result": "Please upload at least one answer image."
+            }
+        )
 
     lastTwoDigits = str(int(examYear))[-2:]
 
@@ -134,7 +149,12 @@ def pastPaperCheckerSubmit():
         fetchStatus, fetchResult = fetchFile(subjectName, subjectCode, examYear, examSeries, shortenedCode, variant, fileType="ms")
 
         if not fetchStatus:
-            return render_template("pastPaperChecker.html", error=f"Failed to fetch mark scheme: {fetchResult}")
+            return jsonify(
+                {
+                    "status": False,
+                    "result": f"Failed to fetch mark scheme: {fetchResult}"
+                }
+            )
 
         markSchemePath = fetchResult
 
@@ -148,7 +168,12 @@ def pastPaperCheckerSubmit():
         uploadStatus, uploadResult = uploadToSupabase("answer-uploads", destinationPath, uploadedFile.read(), uploadedFile.mimetype or "image/jpeg")
 
         if not uploadStatus:
-            return render_template("pastPaperChecker.html", error=f"Failed to upload image {uploadedFile.filename}: {uploadResult}")
+            return jsonify(
+                {
+                    "status": False,
+                    "result": f"Failed to upload answer image {uploadedFile.filename}: {uploadResult}"
+                }
+            )
 
         uploadedImagePaths.append(uploadResult)
 
@@ -156,7 +181,12 @@ def pastPaperCheckerSubmit():
         gradeStatus, gradeResult = pastPaperChecker(subjectName, subjectCode, examYear, examSeries, variant, questionNumber, markSchemePath, uploadedImagePaths)
 
         if not gradeStatus:
-            return render_template("pastPaperChecker.html", error=f"Grading Failed: {gradeResult}")
+            return jsonify(
+                {
+                    "status": False,
+                    "result": f"Grading Failed: {gradeResult}"
+                }
+            )
 
         assert isinstance(gradeResult, dict)
 
@@ -165,17 +195,30 @@ def pastPaperCheckerSubmit():
         if not historyStatus:
             print(f"Failed to insert grading history: {historyResult}")
         
-        return render_template("pastPaperChecker.html", result=gradeResult, historyEntryId=historyResult if historyStatus else None)
+        return jsonify(
+            {
+                "status": True,
+                "mode": "specific",
+                "result": gradeResult,
+                "historyEntryId": historyResult if historyStatus else None
+            }
+        )
 
     segmentStatus, segmentResult = segmentAnswerScript(uploadedImagePaths)
 
     if not segmentStatus:
-        return render_template("pastPaperChecker.html", error=f"Segmentation Failed: {segmentResult}")
+        return jsonify(
+            {
+                "status": False,
+                "result": f"Segmentation Failed: {segmentResult}"
+            }
+        )
 
     assert isinstance(segmentResult, dict)
 
     return jsonify({
         "status": True,
+        "mode": "all",
         "segments": segmentResult["segments"],
         "unmatchedImageIndices": segmentResult.get("unmatched_image_indices", []),
         "imagePaths": uploadedImagePaths,

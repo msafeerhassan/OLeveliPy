@@ -3,16 +3,47 @@ document.addEventListener("DOMContentLoaded", function() {
     const progressStatus = document.getElementById("progressStatus");
     const resultsContainer = document.getElementById("allQuestionsResults");
 
-    form.addEventListener("submit", async function (event) {
-        const questionScope = form.querySelector('input[name="questionScope"]:checked').value;
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text == null ? "" : String(text);
+        return div.innerHTML;
+    }
 
-        if (questionScope !== "all") {
-            return;
+    function renderSpecificResult(result, historyEntryId) {
+        let breakDownHtml = "";
+        (result.breakdown || []).forEach(function (point) {
+            breakDownHtml += `<li>[${escapeHtml(point.status)}] ${escapeHtml(point.point)} - ${escapeHtml(point.reasoning)}</li>`;
+        });
+
+        let mismatchHtml = "";
+        if (result.question_number_mismatch_warning) {
+            mismatchHtml = `<p style="color: orange;"><strong>${escapeHtml(result.question_number_mismatch_warning)}</strong></p>`;
         }
+
+        let coachLinkHtml = "";
+        if (historyEntryId) {
+            coachLinkHtml = `<p><a href="/coach-chat?about=${encodeURIComponent(historyEntryId)}">Ask my coach about this</a></p>`;
+        }
+
+        resultsContainer.innerHTML = `
+            <div>
+                <h2>Question ${escapeHtml(result.question_number_requested)}: ${escapeHtml(result.marks_awarded)} / ${escapeHtml(result.marks_total)}</h2>
+                ${mismatchHtml}
+                <p><strong>Transcription:</strong> ${escapeHtml(result.transcription)}</p>
+                <ul>${breakDownHtml}</ul>
+                <p><strong>Feedback:</strong> ${escapeHtml(result.overall_feedback)}</p>
+                ${coachLinkHtml}
+            </div>
+        `;
+    }
+
+    form.addEventListener("submit", async function (event) {
 
         event.preventDefault();
 
-        progressStatus.textContent = "Uploading Images and Identifying Questions...";
+        const questionScope = form.querySelector('input[name="questionScope"]:checked').value;
+
+        progressStatus.textContent = questionScope === "specific" ? "Grading your answer..." : "Uploading Images and Identifying Questions...";
         resultsContainer.innerHTML = "";
 
         const formData = new FormData(form);
@@ -46,6 +77,12 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        if (submitData.mode === "specific") {
+            renderSpecificResult(submitData.result, submitData.historyEntryId);
+            progressStatus.textContent = "Done!";
+            return ;
+        }
+
         const segments = submitData.segments;
         const imagePaths = submitData.imagePaths;
 
@@ -77,14 +114,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     })
                 });
             } catch (err) {
-                resultsContainer.innerHTML += `<p>Question ${segment.question_number}: request failed (${err})</p>`;
+                resultsContainer.innerHTML += `<p>Question ${escapeHtml(segment.question_number)}: request failed (${escapeHtml(err)})</p>`;
                 continue;
             }
 
             const gradeData = await gradeResponse.json();
 
             if (!gradeData.status) {
-                resultsContainer.innerHTML += `<p>Question ${segment.question_number}: grading failed (${gradeData.result})</p>`;
+                resultsContainer.innerHTML += `<p>Question ${escapeHtml(segment.question_number)}: grading failed (${escapeHtml(gradeData.result)})</p>`;
                 continue;
             }
 
@@ -92,8 +129,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
             resultsContainer.innerHTML += `
             <div>
-                <h3>Question ${segment.question_number}: ${result.marks_awarded} / ${result.marks_total}</h3>
-                <p>${result.overall_feedback}</p>
+                <h3>Question ${escapeHtml(segment.question_number)}: ${escapeHtml(result.marks_awarded)} / ${escapeHtml(result.marks_total)}</h3>
+                <p>${escapeHtml(result.overall_feedback)}</p>
             </div>
             `;
         }

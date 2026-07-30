@@ -9,25 +9,6 @@
 <p style="color: red;"><strong>{{ error }}</strong></p>
 {% endif %}
 
-{% if result %}
-<div>
-    <h2>Question {{ result.question_number_requested }}: {{ result.marks_awarded }} / {{ result.marks_total }}</h2>
-    {% if result.question_number_mismatch_warning %}
-    <p style="color: orange;"><strong>{{ result.question_number_mismatch_warning }}</strong></p>
-    {% endif %}
-    <p><strong>Transcription:</strong> {{ result.transcription }}</p>
-    <ul>
-        {% for point in result.breakdown %}
-        <li>[{{ point.status }}] {{ point.point }} - {{ point.reasoning }}</li>
-        {% endfor %}
-    </ul>
-    <p><strong>Feedback:</strong> {{ result.overall_feedback }}</p>
-    {% if historyEntryId %}
-    <p><a href="/coach-chat?about={{ historyEntryId }}">Ask my coach about this</a></p>
-    {% endif %}
-</div>
-{% endif %}
-
 <form action="/past-paper-checker/submit" method="POST" enctype="multipart/form-data" id="pastPaperExaminerForm">
     <label for="subjectName">Subject Name:</label>
     <br>
