@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %} - Flashcards{% endblock %}
+
+{% block content %}
+
+<h1>Flashcards Review</h1>
+
+{% if error %}
+<p style="color: red;"><strong>{{ error }}</strong></p>
+{% endif %}
+
+<div id="flashCardArea">
+    <p id="noCardsMsg" style="display: none;">No cards due for review right now. Come back later or grade a question to generate more.</p>
+
+    <div id="cardDisplay" style="display: none;">
+        <p id="cardCount"></p>
+        <div style="border: 1px solid #ccc; padding: 20px; min-height: 100px;">
+            <p id="cardFront"></p>
+            <p id="cardBack" style="display: none; color: #444;"></p>
+        </div>
+
+        <button id="showAnswerBtn">Show Answer</button>
+
+        <div id="ratingBtns" style="display: none;">
+            <button data-quality="1">Again</button>
+            <button data-quality="3">Hard</button>
+            <button data-quality="4">Good</button>
+            <button data-quality="5">Easy</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.dueCards = {{ cards | tojson }};
+</script>
+
+<script src="{{ url_for('static', filename='js/flashcards.js') }}"></script>
+{% endblock %}

@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -194,6 +194,8 @@ def pastPaperCheckerSubmit():
 
         if not historyStatus:
             print(f"Failed to insert grading history: {historyResult}")
+        else:
+            genFlashCardsFromResult(session["userId"], subjectName, gradeResult.get("topic"), historyResult, gradeResult)
         
         return jsonify(
             {
@@ -272,7 +274,7 @@ def apiGradeQuestion():
 
     if gradeStatus:
         assert isinstance(gradeResult, dict)
-        historyStatus, historyError = insertGradingHistory(
+        historyStatus, historyResult = insertGradingHistory(
             session["userId"],
             data["subjectName"],
             data["subjectCode"],
@@ -284,7 +286,9 @@ def apiGradeQuestion():
         )
 
         if not historyStatus:
-            print(f"Failed to insert grading history: {historyError}")
+            print(f"Failed to insert grading history: {historyResult}")
+        else:
+            genFlashCardsFromResult(session["userId"], data["subjectName"], gradeResult.get("topic"), historyResult, gradeResult)
 
     return jsonify(
         {
@@ -365,6 +369,38 @@ def weakTopicsPage():
         return render_template("weakTopics.html", error=f"Failed to load topic analysis: {topicsData}")
 
     return render_template("weakTopics.html", topics=topicsData)
+
+@app.route("/flashcards")
+@loginRequired
+def flashCardsPage():
+    dueStatus, dueCards = getDueFlashCards(session["userId"])
+
+    if not dueStatus:
+        return render_template("flashcards.html", error=f"Failed to load flashcards: {dueCards}", cards=[])
+
+    return render_template("flashcards.html", cards=dueCards)
+
+@app.route("/api/review-flashcard", methods=["POST"])
+@loginRequired
+def apiReviewFlashcard():
+    data = request.get_json()
+
+    if not data or "flashcardId" not in data or "quality" not in data:
+        return jsonify(
+            {
+                "status": False,
+                "result": "Missing Flashcard ID or Quality."
+            }
+        ), 400
+
+    reviewStatus, reviewErr = reviewFlashcard(session["userId"], data["flashcardId"], int(data["quality"]))
+
+    return jsonify(
+        {
+            "status": reviewStatus,
+            "result": reviewErr
+        }
+    )
 
 @app.route("/coach-chat")
 @loginRequired

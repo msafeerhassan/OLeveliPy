@@ -5,7 +5,8 @@ from supabase.lib.client_options import SyncClientOptions
 from dotenv import load_dotenv
 from PIL import Image
 import io
-from operator import itemgetter
+
+from datetime import date, timedelta
 
 load_dotenv(override=True)
 
@@ -553,6 +554,83 @@ def getWeakTopics(userId):
     topicList.sort(key=lambda t: t["percentage"])
 
     return True, topicList
+
+def genFlashCardsFromResult(userId, subjectName, topic, sourceEntryId, resultJson):
+    breakdown = resultJson.get("breakdown", [])
+    createdCount = 0
+
+    for point in breakdown:
+        status = point.get("status")
+
+        if status not in ("missed", "partially_met"):
+            continue
+
+        front = f"{subjectName}: {point.get('point')}"
+        back = point.get("reasoning", "No explaination available.")
+
+        try:
+            supabase.table("flashcards").insert({
+                "user_id": userId,
+                "source_entry_id": sourceEntryId,
+                "subject_name": subjectName,
+                "topic": topic,
+                "front": front,
+                "back": back
+            }).execute()
+
+            createdCount += 1
+        except Exception as e:
+            print(f"Failed to create flashcard: {e}")
+
+    return createdCount
+
+def getDueFlashCards(userId, limit=20):
+    try:
+        todayDate = date.today().isoformat()
+        response = supabase.table("flashcards").select("*").eq("user_id", userId).lte("next_review_date", todayDate).order("next_review_date").limit(limit).execute()
+
+        return True, response.data
+    except Exception as e:
+        return False, str(e)
+
+def reviewFlashcard(userId, flashCardId, quality):
+    try:
+        cardResp = supabase.table("flashcards").select("*").eq("user_id", userId).eq("id", flashCardId).limit(1).execute()
+
+        if not cardResp.data:
+            return False, "Flash Card not found :("
+
+        card = cardResp.data[0]
+
+        easeFactor = card["ease_factor"]
+        intervalDays = card["interval_days"]
+
+        if quality < 3:
+            intervalDays = 1
+        else:
+            if intervalDays <= 1:
+                intervalDays = 6
+            else:
+                intervalDays = round(intervalDays * easeFactor)
+
+            easeFactor = max(1.3, easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)))
+
+        nextReviewDate = (date.today() + timedelta(days=intervalDays)).isoformat()
+
+        updateResp = supabase.table("flashcards").update(
+            {
+                "interval_days": intervalDays,
+                "ease_factor": easeFactor,
+                "next_review_date": nextReviewDate
+            }
+        ).eq("id", flashCardId).execute()
+
+        if not updateResp.data:
+            return False, "Failed to update flashcard."
+
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 def insertChatMessage(userId, role, content):
     try:
