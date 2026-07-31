@@ -5,6 +5,10 @@ from supabase.lib.client_options import SyncClientOptions
 from dotenv import load_dotenv
 from PIL import Image
 import io
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 
 from datetime import date, timedelta
 
@@ -781,3 +785,121 @@ Write in plain, unformatted prose only - don't use markdown syntax of anykind - 
         print(f"Failed to save assistant chat message: {insertError}")
 
     return True, reply
+
+def genProgressRepPdf(userId, userEmail):
+    historyStatus, historyData = getGradingHistory(userId, limit=200)
+
+    if not historyStatus:
+        return False, historyData
+
+    topicStatus, topicData = getWeakTopics(userId)
+
+    if not topicStatus:
+        topicData = []
+
+    styles = getSampleStyleSheet()
+    content = []
+
+    content.append(Paragraph("OLeveliPy Progress Report", styles["Title"]))
+    content.append(Paragraph(f"Student: {userEmail}", styles["Normal"]))
+    content.append(Paragraph(f"Generated: {date.today().isoformat()}", styles["Normal"]))
+    content.append(Spacer(1, 20))
+
+    totalMarksAwarded = 0
+    totalMarksPossible = 0
+
+    for entry in historyData:
+        awarded = entry.get("marks_awarded")
+        if awarded is None:
+            awarded = 0
+
+        possible = entry.get("marks_total")
+        if possible is None:
+            possible = 0
+
+        totalMarksAwarded += awarded
+        totalMarksPossible += possible
+
+    if totalMarksPossible > 0:
+        overallPercentage = round((totalMarksAwarded / totalMarksPossible) * 100, 1)
+    else:
+        overallPercentage = 0
+
+    content.append(Paragraph("Summary", styles["Heading1"]))
+    content.append(Paragraph(f"Total Questions Graded: {len(historyData)}", styles["Normal"]))
+    content.append(Paragraph(f"Overall Score: {overallPercentage}% ({totalMarksAwarded}/{totalMarksPossible})", styles["Normal"]))
+    content.append(Spacer(1, 20))
+
+    content.append(Paragraph("Topic Breakdown (Weakest -> Strongest)", styles["Heading1"]))
+
+    if topicData:
+        tableRows = [
+            [
+                "Topic",
+                "Score",
+                "Questions"
+            ]
+        ]
+
+        for topic in topicData:
+            tableRows.append([
+                topic["topic"],
+                f"{topic['percentage']}% ({topic['marksAwarded']}/{topic['marksTotal']})",
+                str(topic["questionCount"])
+            ])
+
+        topicTable = Table(tableRows, colWidths=[260, 150, 80])
+        topicTable.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ]))
+
+        content.append(topicTable)
+    else:
+        content.append(Paragraph("No topic data available yet.", styles["Normal"]))
+
+    content.append(Spacer(1, 20))
+    content.append(Paragraph("Recent Grading History", styles["Heading1"]))
+
+    if historyData:
+        historyRows = [
+            [
+                "Date",
+                "Subject",
+                "Exam",
+                "Question",
+                "Score"
+            ]
+        ]
+
+        for entry in historyData[:50]:
+            historyRows.append(
+                [
+                    str(entry.get("created_at", ""))[:10],
+                    str(entry.get("subject_name", "")),
+                    f"{entry.get('examination_year', '')} {entry.get('examination_series', '')}",
+                    str(entry.get('question_number', "")),
+                    f"{entry.get('marks_awarded')}/{entry.get('marks_total')}"
+                ]
+            )
+
+        historyTable = Table(historyRows, colWidths=[70, 90, 100, 80, 60])
+        historyTable.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
+            ("GRID", (0,0), (-1, -1), 0.5, colors.grey),
+            ("FONTSIZE", (0,0), (-1,-1), 8),
+        ]))
+
+        content.append(historyTable)
+    else:
+        content.append(Paragraph("No grading history yet.", styles["Normal"]))
+
+    pdfBuffer = io.BytesIO()
+    doc = SimpleDocTemplate(pdfBuffer, pagesize=letter)
+    doc.build(content)
+
+    return True, pdfBuffer.getvalue()
+

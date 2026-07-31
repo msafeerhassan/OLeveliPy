@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard, genProgressRepPdf
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -369,6 +369,21 @@ def weakTopicsPage():
         return render_template("weakTopics.html", error=f"Failed to load topic analysis: {topicsData}")
 
     return render_template("weakTopics.html", topics=topicsData)
+
+@app.route("/progress-report")
+@loginRequired
+def progressReportDownload():
+    pdfStatus, pdfResult = genProgressRepPdf(session["userId"], session["userEmail"])
+
+    if not pdfStatus:
+        return render_template("weakTopics.html", error=f"Failed to generate report: {[pdfResult]}")
+
+    return send_file(
+        io.BytesIO(pdfResult),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="OLeveliPy_Progress_Report.pdf"
+    )
 
 @app.route("/flashcards")
 @loginRequired
