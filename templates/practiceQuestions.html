@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %} - Practice Questions{% endblock %}
+
+{% block content %}
+
+<h1>Practice Questions</h1>
+
+{% if error %}
+<p style="color: red;"><strong>{{ error }}</strong></p>
+{% endif %}
+
+<form id="generateForm">
+    <label for="subjectName">Subject:</label>
+    <input type="text" id="subjectName" placeholder="Physics" required>
+
+    <label for="topic">Topic:</label>
+    <input type="text" id="topic" placeholder="e.g. Space Physics..." required>
+
+    <button type="submit">Generate Question</button>
+</form>
+<p id="generateStatus"></p>
+
+<hr>
+
+<div id="questionsList">
+    {% for q in questions %}
+    <div class="practice-question" data-question-id="{{ q.id }}">
+        <p><strong>{{ q.subject_name }} - {{ q.topic }}</strong> ({{ q.marks_total }} marks)</p>
+
+        <p>{{ q.question_text }}</p>
+        <form class="gradeForm">
+            <input type="hidden" class="questionIdInput" value="{{ q.id }}">
+            <label>Type your answer:</label><br>
+            <textarea rows="4" style="width: 100%;" class="answerTextInput" placeholder="Type your answer here..."></textarea><br><br>
+            <label>Or upload a photo of your handwritten answer:</label><br>
+            <input type="file" accept="image/*" multiple class="answerImageInput"><br><br>
+            <button type="submit">Submit Answer</button>
+        </form>
+        <div class="gradeResult"></div>
+    </div>
+    <hr>
+    {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='js/practiceQuestions.js') }}"></script>
+
+{% endblock %}

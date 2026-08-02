@@ -1,4 +1,4 @@
-import requests, os, base64, json, time
+import requests, os, base64, json, time, uuid
 from typing import Any
 from supabase import create_client, Client
 from supabase.lib.client_options import SyncClientOptions
@@ -308,6 +308,128 @@ You are an experienced {subjectName} examiner grading a student's handwritten an
          resultJson = json.loads(cleanContent)
     except json.JSONDecodeError as e:
         return False, f"Model did not return valid JSON Response: {e}. Raw Response: {content}"
+
+    return True, resultJson
+
+def gradeTypedAnswer(subjectName, subjectCode, examinationYear, examinationSeries, variant, questionNumber, markSchemePath, answerText):
+    if not aiKey:
+        return False, "Hack Club AI API Key Missing :("
+
+    if not answerText or not answerText.strip():
+        return False, "No answer text provided :("
+
+    markSchemeDownloadStatus, markSchemeBytes = downloadFromSupabase("papers", markSchemePath)
+
+    if not markSchemeDownloadStatus:
+        return False, f"Failed to download mark scheme from storage: {markSchemeBytes}"
+
+    assert isinstance(markSchemeBytes, bytes)
+
+    markSchemeEncoded = encodeBytesToBase64Uri(markSchemeBytes, "application/pdf")
+
+    SYSTEM_PROMPT = f"""
+You are an experienced {subjectName} examiner grading a student's typed answer for CAIE O Level Exam ({subjectName}, code {subjectCode}, {examinationYear} {examinationSeries}, variant {variant}).
+    You will be given:
+    1. The official mark scheme PDF for that full paper.
+    2. The student's typed answer to Question {questionNumber}, exactly as they typed it.
+
+    Your Task:
+    1. Locate question {questionNumber} in the mark scheme and identify each individual mark scheme point (each thing that earns credit) and maximum marks available.
+    2. Compare the typed answer against each mark scheme point and decide whether it was met, partially met or missed with brief reasoning for each.
+    3. Sum the marks awarded.
+
+    Also identify the specific {subjectName} topic this question tests, using a consistent, standard O-Level topic name.
+
+    Respond with ONLY a single valid JSON object, no markdown code fence, no preamble, no explanation outside the JSON. Use exactly this structure:
+    {{
+        "question_number_requested": "{questionNumber}",
+        "topic": "<standard topic name for this question>",
+        "marks_awarded": <integer>,
+        "marks_total": <integer>,
+        "breakdown": [
+            {{"point": "<mark scheme point in your own words>", "status": "met | partially_met | missed", "reasoning": "<brief reasoning>"}}
+        ],
+        "overall_feedback": "<1-3 sentences of constructive feedback for the student>"
+    }}
+"""
+
+    userContent: list[dict[str, Any]] = [
+        {
+            "type": "text",
+            "text": f"Grade this typed answer for question {questionNumber} against the attached mark scheme.\n\nStudent's Answer:\n{answerText}"
+        },
+        {
+            "type": "file",
+            "file": {
+                "filename": "mark_scheme.pdf",
+                "file_data": markSchemeEncoded
+            },
+        },
+    ]
+
+    lastError = "Unknown Error"
+    response = None
+
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                "https://ai.hackclub.com/proxy/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {aiKey}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": aiModel,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": SYSTEM_PROMPT
+                        },
+                        {
+                            "role": "user",
+                            "content": userContent
+                        }
+                    ]
+                },
+                timeout=60
+            )
+
+            response.raise_for_status()
+            break
+        except requests.exceptions.RequestException as e:
+            lastError = f"Hack Club AI API Request Failed: {e}"
+            response = None
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+
+    if response is None:
+        return False, lastError
+
+    try:
+        responseData = response.json()
+        content = responseData["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError) as e:
+        return False, f"Unexpected API Response Structure: {e}"
+
+    cleanContent = content.strip()
+
+    if cleanContent.startswith("```"):
+        cleanContent = cleanContent.strip("`")
+
+        if cleanContent.lower().startswith("json"):
+            cleanContent = cleanContent[4:]
+
+        cleanContent = cleanContent.strip()
+
+    try:
+        resultJson = json.loads(cleanContent)
+    except json.JSONDecodeError as e:
+        return False, f"Model didn't return valid JSON: {e}. Raw Response: {content}"
+
+    resultJson["transcription"] = answerText
+    resultJson.setdefault("question_number_detected_in_image", None)
+    resultJson.setdefault("question_number_mismatch_warning", None)
+    resultJson.setdefault("illegible_sections", None)
 
     return True, resultJson
 
@@ -903,3 +1025,175 @@ def genProgressRepPdf(userId, userEmail):
 
     return True, pdfBuffer.getvalue()
 
+def genPracticeMsPdf(subjectName, topic, questionTxt, markSchemePoints, marksTotal):
+    styles = getSampleStyleSheet()
+    content = []
+
+    content.append(Paragraph(f"{subjectName} Practice Question - {topic}", styles["Title"]))
+    content.append(Spacer(1, 12))
+    content.append(Paragraph("Question 1", styles["Heading1"]))
+    content.append(Paragraph(questionTxt, styles["Normal"]))
+    content.append(Spacer(1, 20))
+
+    content.append(Paragraph("Mark Scheme", styles["Heading1"]))
+
+    rows = [
+        [
+            "Point",
+            "Marks"
+        ]
+    ]
+
+    for point in markSchemePoints:
+        rows.append([point.get("point", ""), str(point.get("marks", ""))])
+
+    table = Table(rows, colWidths=[400, 60])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+        ("GRID", (0,0), (-1, -1), 0.5, colors.grey),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ]))
+
+    content.append(table)
+    content.append(Spacer(1, 12))
+    content.append(Paragraph(f"Total Marks: {marksTotal}", styles["Normal"]))
+
+    pdfBuffer = io.BytesIO()
+    doc = SimpleDocTemplate(pdfBuffer, pagesize=letter)
+    doc.build(content)
+
+    return pdfBuffer.getvalue()
+
+def genPracticeQuestions(userId, subjectName, topic):
+    if not aiKey:
+        return False, "Hack Club AI API Key Missing :("
+
+    SYSTEM_PROMPT = f"""
+You are an expereinced {subjectName} examiner writing an original O Level Standard Practice Question on the topic "{topic}".
+
+Write one question, at a difficulty and style consistent with real CAIE O Level {subjectName} papers, along with a proper mark scheme breaking down exactly how marks are awarded.
+
+Respond with ONLY with a single valid JSON Object, no markdown code fence, no preamble, no explaination out JSON. Use exactly this structure:
+{{
+    "question_text": "<the full question text, including any necessary data/values needed to answer it>",
+    "marks_total": <integer, sum of all individual point marks>,
+    "mark_scheme_points": [
+        {{"point": "<what earns credit, in mark-scheme style wording>", "marks": <integer marks for this point>}}
+    ]
+}}
+"""
+
+    lastError = "Unknown Error"
+    response = None
+
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                "https://ai.hackclub.com/proxy/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {aiKey}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": aiModel,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": SYSTEM_PROMPT
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Generate one practice question on {topic}."
+                        }
+                    ]
+                },
+                timeout=60
+            )
+
+            response.raise_for_status()
+            break
+        except requests.exceptions.RequestException as e:
+            lastError = f"Hack Club AI API Request Failed: {e}"
+            response = None
+
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+
+    if response is None:
+        return False, lastError
+
+    try:
+        responseData = response.json()
+        content = responseData["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError) as e:
+        return False, f"Unexpected API Response Structure: {e}"
+
+    cleanContent = content.strip()
+
+    if cleanContent.startswith("```"):
+        cleanContent = cleanContent.strip("`")
+
+        if cleanContent.lower().startswith("json"):
+            cleanContent = cleanContent[4:]
+
+        cleanContent = cleanContent.strip()
+
+    try:
+        questionData = json.loads(cleanContent)
+    except json.JSONDecodeError as e:
+        return False, f"Model did not return valid JSON: {e}. Raw Response: {content}"
+
+    questionText = questionData.get("question_text")
+    marksTotal = questionData.get("marks_total")
+    markSchemePoints = questionData.get("mark_scheme_points", [])
+
+    if not questionText or not marksTotal or not markSchemePoints:
+        return False, "Missing Data in AI Response."
+
+    pdfBytes = genPracticeMsPdf(subjectName, topic, questionText, markSchemePoints, marksTotal)
+
+    storagePath = f"generated/{str(uuid.uuid4())}_ms.pdf"
+
+    uploadStatus, uploadResult = uploadToSupabase("papers", storagePath, pdfBytes, "application/pdf")
+
+    if not uploadStatus:
+        return False, f"Failed to upload generated mark scheme: {uploadResult}"
+
+    try:
+        insertResponse = supabase.table("practice_questions").insert({
+            "user_id": userId,
+            "subject_name": subjectName,
+            "topic": topic,
+            "question_text": questionText,
+            "marks_total": marksTotal,
+            "mark_scheme_path": storagePath
+        }).execute()
+
+        if not insertResponse.data:
+            return False, f"Insert returned no data. Full response: {insertResponse}"
+
+        return True, insertResponse.data[0]
+    except Exception as e:
+        return False, str(e)
+
+def getPracticeQuestions(userId, limit=50):
+    try:
+        response = supabase.table("practice_questions").select("*").eq("user_id", userId).order("created_at", desc=True).limit(limit).execute()
+
+        return True, response.data
+    except Exception as e:
+        return False, str(e)
+
+def getPracticeQuestionEntry(userId, questionId):
+    try:
+        response = supabase.table("practice_questions").select("*").eq("user_id", userId).eq("id", questionId).limit(1).execute()
+
+        if not response.data:
+            return False, "Practice Question not found."
+
+        return True, response.data[0]
+    except Exception as e:
+        return False, str(e)
+
+    

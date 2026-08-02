@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard, genProgressRepPdf
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard, genProgressRepPdf, genPracticeQuestions, getPracticeQuestions, getPracticeQuestionEntry, gradeTypedAnswer
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
+from datetime import datetime, date
 
 load_dotenv(override=True)
 
@@ -378,6 +379,8 @@ def progressReportDownload():
     if not pdfStatus:
         return render_template("weakTopics.html", error=f"Failed to generate report: {[pdfResult]}")
 
+    assert isinstance(pdfResult, bytes)
+
     return send_file(
         io.BytesIO(pdfResult),
         mimetype="application/pdf",
@@ -414,6 +417,130 @@ def apiReviewFlashcard():
         {
             "status": reviewStatus,
             "result": reviewErr
+        }
+    )
+
+@app.route("/practice-questions")
+@loginRequired
+def practiceQuestionsPage():
+    listStatus, listData = getPracticeQuestions(session["userId"])
+
+    if not listStatus:
+        return render_template("practiceQuestions.html", error=f"Failed to load practice questions: {listData}", questions=[])
+
+    return render_template("practiceQuestions.html", questions=listData)
+
+@app.route("/api/generate-practice-question", methods=["POST"])
+@loginRequired
+def apiGenPracticeQuestion():
+    data = request.get_json()
+
+    if not data or not data.get("subjectName") or not data.get("topic"):
+        return jsonify(
+            {
+                "status": False,
+                "result": "Subject Name and Topic are Required!"
+            }
+        ), 400
+
+    genStatus, genResult = genPracticeQuestions(session["userId"], data["subjectName"], data["topic"])
+
+    return jsonify(
+        {
+            "status": genStatus,
+            "result": genResult
+        }
+    )
+
+@app.route("/api/grade-practice-question", methods=["POST"])
+@loginRequired
+def apiGradePracticeQuestion():
+    questionId = request.form.get("questionId")
+    answerText = request.form.get("answerText")
+    uploadedFiles = request.files.getlist("answerImages")
+
+    if not questionId:
+        return jsonify(
+            {
+                "status": False,
+                "result": "Missing Question ID"
+            }
+        ), 400
+
+    if not uploadedFiles and not answerText:
+        return jsonify(
+            {
+                "status": False,
+                "result": "Please upload at least one answer image or type the answer."
+            }
+        ), 400
+
+    entryStatus, entryData = getPracticeQuestionEntry(session["userId"], questionId)
+
+    if not entryStatus:
+        return jsonify(
+            {
+                "status": False,
+                "result": entryData
+            }
+        )
+
+    assert isinstance(entryData, dict)
+
+    if answerText and answerText.strip():
+        gradeStatus, gradeResult = gradeTypedAnswer(
+            entryData["subject_name"],
+            "Generated",
+            str(date.today().year),
+            "Practice",
+            "1",
+            "1",
+            entryData["mark_scheme_path"],
+            answerText
+        )
+    else:
+        requestId = str(uuid.uuid4())
+        uploadedImagePaths = []
+
+        for uploadedFile in uploadedFiles:
+            path = f"{requestId}/{uploadedFile.filename}"
+            uploadStatus, uploadResult = uploadToSupabase("answer-uploads", path, uploadedFile.read(), uploadedFile.mimetype or "image/jpeg")
+
+            if not uploadStatus:
+                return jsonify(
+                    {
+                        "status": False,
+                        "result": f"Failed to upload answer image: {uploadResult}"
+                    }
+                )
+
+            uploadedImagePaths.append(uploadResult)
+
+        gradeStatus, gradeResult = pastPaperChecker(
+            entryData["subject_name"],
+            "Generated",
+            str(date.today().year),
+            "Practice",
+            "1",
+            "1",
+            entryData["mark_scheme_path"],
+            uploadedImagePaths
+        )
+
+    if gradeStatus:
+        assert isinstance(gradeResult, dict)
+
+        historyStatus, historyResutl = insertGradingHistory(
+            session["userId"], entryData["subject_name"], "Generated", str(date.today().year), "Practice", "1", "1", gradeResult
+        )
+
+        if historyStatus:
+            genFlashCardsFromResult(session["userId"], entryData["subject_name"], gradeResult.get("topic"), historyResutl, gradeResult)
+
+    return jsonify(
+        {
+            "status": gradeStatus,
+            "result": gradeResult
         }
     )
 

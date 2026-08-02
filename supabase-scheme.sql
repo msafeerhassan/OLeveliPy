@@ -31,3 +31,20 @@ create policy "Users can access their own grading history"
 create policy "Users can access their own chat history"
     on coach_chat_history for all
     using (auth.uid() = user_id);
+
+CREATE TABLE practice_questions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid REFERENCES auth.users(id) NOT NULL,
+    subject_name text NOT NULL,
+    topic text NOT NULL,
+    question_text text NOT NULL,
+    marks_total int NOT NULL
+    mark_scheme_path text NOT NULL
+    created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE practice_questions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can access their own practice questions"
+    ON practice_questions FOR ALL
+    USING (auth.uid() = user_id);
