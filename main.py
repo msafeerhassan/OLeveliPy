@@ -435,7 +435,7 @@ def practiceQuestionsPage():
 def apiGenPracticeQuestion():
     data = request.get_json()
 
-    if not data or not data.get("subjectName") or not data.get("topic"):
+    if not data or not data.get("subjectName") or not data.get("topic") or not data.get("subjectCode"):
         return jsonify(
             {
                 "status": False,
@@ -443,7 +443,7 @@ def apiGenPracticeQuestion():
             }
         ), 400
 
-    genStatus, genResult = genPracticeQuestions(session["userId"], data["subjectName"], data["topic"])
+    genStatus, genResult = genPracticeQuestions(session["userId"], data["subjectName"], data["subjectCode"], data["topic"])
 
     return jsonify(
         {

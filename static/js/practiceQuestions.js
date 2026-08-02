@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
         event.preventDefault();
 
         const subjectName = document.getElementById("subjectName").value;
+        const subjectCode = document.getElementById("subjectCode").value;
         const topic = document.getElementById("topic").value;
 
         genStatus.textContent = "Generating Question...";
@@ -26,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 body: JSON.stringify(
                     {
                         subjectName: subjectName,
+                        subjectCode: subjectCode,
                         topic: topic
                     }
                 )

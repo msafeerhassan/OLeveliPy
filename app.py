@@ -908,6 +908,52 @@ Write in plain, unformatted prose only - don't use markdown syntax of anykind - 
 
     return True, reply
 
+SUBJECT_SYLLABUS_URLS = {
+    "5054": "https://www.cambridgeinternational.org/Images/697324-2026-2028-syllabus.pdf",
+    "5090": "https://www.cambridgeinternational.org/Images/697330-2026-2028-syllabus.pdf",
+    "5070": "https://www.cambridgeinternational.org/Images/697326-2026-2028-syllabus.pdf",
+    "4024": "https://www.cambridgeinternational.org/Images/662480-2025-2027-syllabus.pdf",
+    "1123": "https://www.cambridgeinternational.org/Images/634453-2024-2026-syllabus.pdf"
+}
+
+def getSyllabusPdf(subjectCode):
+    subjectCode = str(subjectCode)
+    storagePath = f"syllabus/{subjectCode}.pdf"
+
+    availability = checkExistInSupabase("papers", storagePath)
+
+    if availability:
+        return True, storagePath
+
+    syllabusUrl = SUBJECT_SYLLABUS_URLS.get(subjectCode)
+
+    if not syllabusUrl:
+        return False, "No known syllabus URL for this subject code."
+
+    lastError = "Unknown Error"
+    response = None
+
+    for attempt in range(3):
+        try:
+            response = requests.get(syllabusUrl, headers=headers, timeout=30)
+            response.raise_for_status()
+            break
+        except Exception as e:
+            lastError = str(e)
+            response = None
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+
+    if response is None:
+        return False, lastError
+
+    uploadStatus, uploadResult = uploadToSupabase("papers", storagePath, response.content, "application/pdf")
+
+    if not uploadStatus:
+        return False, uploadResult
+
+    return True, storagePath
+
 def genProgressRepPdf(userId, userEmail):
     historyStatus, historyData = getGradingHistory(userId, limit=200)
 
@@ -1065,12 +1111,35 @@ def genPracticeMsPdf(subjectName, topic, questionTxt, markSchemePoints, marksTot
 
     return pdfBuffer.getvalue()
 
-def genPracticeQuestions(userId, subjectName, topic):
+def genPracticeQuestions(userId, subjectName, subjectCode, topic):
     if not aiKey:
         return False, "Hack Club AI API Key Missing :("
 
+    syllabusStatus, syllabusResult = getSyllabusPdf(subjectCode)
+
+    syllabusFileBlock = None
+
+    if syllabusStatus:
+        syllabusDownloadStatus, syllabusBytes = downloadFromSupabase("papers", syllabusResult)
+
+        if syllabusDownloadStatus:
+            syllabusFileBlock = {
+                "type": "file",
+                "file": {
+                    "filename": "syllabus.pdf",
+                    "file_data": encodeBytesToBase64Uri(syllabusBytes, "application/pdf")
+                }
+            }
+
+    if syllabusFileBlock:
+        instruction = """The official CAIE Syllabus Document for this subject is attached. You MUST base the scope, depth and wording of the question strictly on what's actually listed in the attached syllabus for this topic - do not test content beyond what the syllabus specifies for this topic and use the syllabus's own command words where applicable."""
+    else:
+        instruction = f"""No official syllabus document is available for this subject in this system. Use your best knowledge of standard, current O Level CAIE {subjectName} syllabus for this topic and be conservative - stay within commonly taught, standard scopre for this topic rather than including advanced, unusual or ambiguous content that might not be part of every version of the syllabus"""
+
     SYSTEM_PROMPT = f"""
 You are an expereinced {subjectName} examiner writing an original O Level Standard Practice Question on the topic "{topic}".
+
+{instruction}
 
 Write one question, at a difficulty and style consistent with real CAIE O Level {subjectName} papers, along with a proper mark scheme breaking down exactly how marks are awarded.
 
@@ -1083,6 +1152,13 @@ Respond with ONLY with a single valid JSON Object, no markdown code fence, no pr
     ]
 }}
 """
+
+    userContent: list[dict[str, Any]] = [
+        {
+            "type": "text",
+            "text": f"Generate one practice question on {topic}."
+        }
+    ]
 
     lastError = "Unknown Error"
     response = None
@@ -1104,7 +1180,7 @@ Respond with ONLY with a single valid JSON Object, no markdown code fence, no pr
                         },
                         {
                             "role": "user",
-                            "content": f"Generate one practice question on {topic}."
+                            "content": userContent
                         }
                     ]
                 },
