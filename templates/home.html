@@ -1,8 +1,75 @@
 {% extends "base.html" %}
-
 {% block title %} - Home{% endblock %}
 
 {% block content %}
 
 <h1>OLeveliPy - Your O Level Study Assistant</h1>
+
+{% if not loggedIn %}
+<p>Welcome! <a href="/login">Log in</a> or <a href="/signup">Sign up</a> to get started.</p>
+{% else %}
+
+<div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div style="border: 1px solid #ccc; padding: 15px; min-width: 220px;">
+        <h3>Flashcards Due</h3>
+        {% if dashboard.dueFlashcardCount > 0 %}
+        {% set count = dashboard.dueFlashcardCount %}
+        <p>{{ count }} card{{ "s" if count != 1 else "" }} ready for review.</p>
+        <a href="/flashcards">Review Now</a>
+        {% else %}
+        <p>Nothing due right now. Keep it up!</p>
+        {% endif %}
+    </div>
+
+    <div style="border: 1px solid #ccc; padding: 15px; min-width: 220px;">
+        <h3>Weakest Topic</h3>
+        {% if dashboard.weakestTopic %}
+        <p>{{ dashboard.weakestTopic.topic }}</p>
+        <p>{{ dashboard.weakestTopic.percentage }}% ({{ dashboard.weakestTopic.marksAwarded }}/{{ dashboard.weakestTopic.marksTotal }})</p>
+        <a href="/practice-questions">Practice this topic</a>
+        {% else %}
+        <p>Grade a few questions to see your weak topics here.</p>
+        {% endif %}
+    </div>
+
+    <div style="border: 1px solid #ccc; padding: 15px; min-width: 220px;">
+        <h3>Overall Progress</h3>
+        {% if dashboard.overallPercentage is not none %}
+        <p>{{ dashboard.overallPercentage }}% across {{ dashboard.totalGraded }} question{{ "s" if dashboard.totalGraded != 1 else "" }} graded.</p>
+        <a href="/weak-topics">View full break down</a>
+        {% else %}
+        <p>No grading history yet.</p>
+        <a href="/past-paper-checker">Grade your first question</a>
+        {% endif %}
+    </div>
+</div>
+
+<h3 style="margin-top: 30px;">Recent Activity</h3>
+
+{% if dashboard.recentHistory %}
+<table border="1" cellpadding="6">
+    <tr>
+        <th>Date</th>
+        <th>Subject</th>
+        <th>Question</th>
+        <th>Score</th>
+    </tr>
+
+    {% for entry in dashboard.recentHistory %}
+
+    <tr>
+        <td>{{ entry.created_at[:10] }}</td>
+        <td>{{ entry.subject_name }}</td>
+        <td>{{ entry.question_number }}</td>
+        <td>{{ entry.marks_awarded }}/{{ entry.marks_total }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<p><a href="/grading-history">View full history</a></p>
+{% else %}
+<p>No activity yet.</p>
+{% endif %}
+
+{% endif %}
+
 {% endblock %}

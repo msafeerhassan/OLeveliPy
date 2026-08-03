@@ -1272,4 +1272,46 @@ def getPracticeQuestionEntry(userId, questionId):
     except Exception as e:
         return False, str(e)
 
-    
+def getDashboardData(userId):
+    dueStatus, dueCards = getDueFlashCards(userId, limit=100)
+
+    if dueStatus:
+        dueCount = len(dueCards)
+    else:
+        dueCount = 0
+
+    topicStatus, topicData = getWeakTopics(userId)
+
+    if topicStatus and topicData:
+        weakestTopic = topicData[0]
+    else:
+        weakestTopic = None
+
+    historyStatus, historyData = getGradingHistory(userId, limit=5)
+
+    if historyStatus:
+        recentHistory = historyData
+    else:
+        recentHistory = []
+
+    fullHistoryStatus, fullHistoryData = getGradingHistory(userId, limit=200)
+
+    if fullHistoryStatus:
+        totalGraded = len(fullHistoryData)
+        totalAwarded = 0
+        totalPossible = 0
+
+        for entry in fullHistoryData:
+            totalAwarded += entry.get("marks_awarded") or 0
+            totalPossible += entry.get("marks_total") or 0
+
+        if totalPossible > 0:
+            overallPct = round((totalAwarded / totalPossible) * 100, 1)
+
+    return {
+        "dueFlashcardCount": dueCount,
+        "weakestTopic": weakestTopic,
+        "recentHistory": recentHistory,
+        "totalGraded": totalGraded,
+        "overallPercentage": overallPct
+    }

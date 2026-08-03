@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard, genProgressRepPdf, genPracticeQuestions, getPracticeQuestions, getPracticeQuestionEntry, gradeTypedAnswer
+from app import fetchFile, checkFilePresent, downloadFromSupabase, pastPaperChecker, segmentAnswerScript, uploadToSupabase, signInUser, signUpUser, insertGradingHistory, getGradingHistory, getChatHistory, coachChat, getWeakTopics, getGradingHistoryEntry, genFlashCardsFromResult, getDueFlashCards, reviewFlashcard, genProgressRepPdf, genPracticeQuestions, getPracticeQuestions, getPracticeQuestionEntry, gradeTypedAnswer, getDashboardData
 import io, os, uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -26,7 +26,12 @@ def loginRequired(routeFunc):
 
 @app.route("/")
 def homePage():
-    return render_template("home.html")
+   if "userId" not in session:
+       return render_template("home.html", loggedIn=False)
+
+   dashboardData = getDashboardData(session["userId"])
+
+   return render_template("home.html", loggedIn=True, dashboard=dashboardData)
 
 @app.route("/fetch-file", methods = ["GET", "POST"])
 def fetchFilePage():
