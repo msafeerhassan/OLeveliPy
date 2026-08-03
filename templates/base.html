@@ -4,28 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OLeveliPy{% block title %}{% endblock %}</title>
+    <link rel="preconnet" href="https://fonts.googleapis.com">
+    <link rel="preconnet" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Public+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <nav>
-    <a href="/">Home</a>
-    <a href="/fetch-file">Download File</a>
-    <a href="/past-paper-checker">Past Paper Checker</a>
-    {% if session.userId %}
-    <a href="/grading-history">Grading History</a>
-    <a href="/coach-chat">Chat With Coach</a>
-    <a href="/weak-topics">Weak Topics</a>
-    <a href="/flashcards">Flash Cards</a>
-    <a href="/practice-questions">Practice Questions</a>
-    <span>{{ session.userEmail }}</span>
-    <form action="/logout" method="POST" style="display: inline;">
-        <button type="submit">Log Out</button>
-    </form>
-    {% else %}
-    <a href="/login">Log In</a>
-    <a href="/signup">Sign Up</a>
-    {% endif %}
-    </nav>
-    <hr>
-    {% block content %}{% endblock %}
+    <header class="siteHeader">
+        <nav class="siteNav">
+            <a href="/">Home</a>
+            <a href="/fetch-file">Download File</a>
+            <a href="/past-paper-checker">Past Paper Checker</a>
+            {% if session.userId %}
+            <a href="/grading-history">Grading History</a>
+            <a href="/coach-chat">Chat With Coach</a>
+            <a href="/weak-topics">Weak Topics</a>
+            <a href="/flashcards">Flash Cards</a>
+            <a href="/practice-questions">Practice Questions</a>
+            <span class="navEmail">{{ session.userEmail }}</span>
+            <form action="/logout" method="POST" style="display: inline;">
+                <button type="submit">Log Out</button>
+            </form>
+            {% else %}
+            <a href="/login">Log In</a>
+            <a href="/signup">Sign Up</a>
+        {% endif %}
+        </nav>
+    </header>
+    <main class="paper">
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>

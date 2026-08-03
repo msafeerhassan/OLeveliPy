@@ -1,0 +1,73 @@
+:root {
+    --color-bg: #FAF9F6;
+    --color-ink: #1B2430;
+    --color-red: #B3182F;
+    --color-green: #2F6E4F;
+    --color-graphite: #6B7280;
+    --color-rule: #D8DCE3;
+
+    --font-display: "Source Serif 4", Georgia, serif;
+    --font-body: "Public Sans", -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospacel
+
+    --radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+}
+
+h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0 0 0.5em;
+}
+
+h1 {
+    font-size: 2rem;
+}
+
+h2 {
+    font-size: 1.4rem;
+    margin-top: 1.8rem;
+}
+
+h3 {
+    font-size: 1.1rem;
+}
+
+p {
+    margin: 0 0 1em;
+}
+
+a {
+    color: var(--color-red);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+}
+
+a:hover, a:focus-visible {
+    border-bottom-color: var(--color-red);
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+}
