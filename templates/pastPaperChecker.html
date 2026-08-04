@@ -6,7 +6,7 @@
 <h1>Get Solved Past Papers Checked by AI</h1>
 
 {% if error %}
-<p style="color: var(--color-red);"><strong>{{ error }}</strong></p>
+<p class="errorText">{{ error }}</p>
 {% endif %}
 
 <form action="/past-paper-checker/submit" method="POST" enctype="multipart/form-data" id="pastPaperExaminerForm">

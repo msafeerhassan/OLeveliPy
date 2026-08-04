@@ -6,40 +6,46 @@
 <h1>Download Any Mark Scheme or Question Paper</h1>
 
 {% if error %}
-<p style="color: red;"><strong>{{ error }}</strong></p>
+<p class="errorText">{{ error }}</p>
 {% endif %}
 
 <form method="POST">
-    <label for="subjectName">Subject Name:</label>
-    <br>
-    <input type="text" name="subjectName" id="subjectName" placeholder="Physics" required>
-    <br><br>
-    <label for="subjectCode">Subject Code:</label>
-    <br>
-    <input type="number" name="subjectCode" id="subjectCode" placeholder="5054" required>
-    <br><br>
-    <label for="examinationYear">Examination Year:</label>
-    <br>
-    <input type="number" name="examinationYear" id="examinationYear" placeholder="2025" required>
-    <br><br>
-    <label for="examinationSeries">Examination Series:</label>
-    <br>
-    <select name="examinationSeries" id="examinationSeries">
-        <option value="may-june">May/June</option>
-        <option value="oct-nov">October/November</option>
-    </select><br><br>
 
-    <label for="variant">Variant:</label><br>
-    <input type="number" name="variant" value="11" required id="variant"><br><br>
+    <div class="fieldGroup">
+        <label for="subjectName">Subject Name:</label>
+        <input type="text" name="subjectName" id="subjectName" placeholder="Physics" required>
+    </div>
 
-    <label for="fileType">File Type:</label><br>
-    <select name="fileType" id="fileType">
-        <option value="qp">Question Paper</option>
-        <option value="ms">Mark Scheme</option>
-    </select>
-    <br>
-    <br>
+    <div class="fieldGroup">
+        <label for="subjectCode">Subject Code:</label>
+        <input type="number" name="subjectCode" id="subjectCode" placeholder="5054" required>
+    </div>
 
+    <div class="fieldGroup">
+        <label for="examinationYear">Examination Year:</label>
+        <input type="number" name="examinationYear" id="examinationYear" placeholder="2025" required>
+    </div>
+
+    <div class="fieldGroup">
+        <label for="examinationSeries">Examination Series:</label>
+        <select name="examinationSeries" id="examinationSeries">
+            <option value="may-june">May/June</option>
+            <option value="oct-nov">October/November</option>
+        </select>
+    </div>
+
+    <div class="fieldGroup">
+        <label for="variant">Variant:</label>
+        <input type="number" name="variant" value="11" required id="variant">
+    </div>
+
+    <div class="fieldGroup">
+        <label for="fileType">File Type:</label><br>
+        <select name="fileType" id="fileType">
+            <option value="qp">Question Paper</option>
+            <option value="ms">Mark Scheme</option>
+        </select>
+    </div>  
     <button type="submit">Download File!</button>
 </form>
 

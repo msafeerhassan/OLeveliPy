@@ -274,3 +274,18 @@ td {
     font-size: 0.85rem;
     color: var(--color-graphite);
 }
+
+.errorText {
+    color: var(--color-red);
+    font-weight: 600;
+}
+
+.authForm {
+    max-width: 340px;
+}
+
+.authFooter {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--color-graphite);
+}
