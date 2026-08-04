@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         resultsContainer.innerHTML = `
             <div>
-                <h2>Question ${escapeHtml(result.question_number_requested)}: ${escapeHtml(result.marks_awarded)} / ${escapeHtml(result.marks_total)}</h2>
+                <h2>Question ${escapeHtml(result.question_number_requested)} <span class="markedScore">${escapeHtml(result.marks_awarded)}/${escapeHtml(result.marks_total)}</span></h2>
                 ${mismatchHtml}
                 <p><strong>Transcription:</strong> ${escapeHtml(result.transcription)}</p>
                 <ul>${breakDownHtml}</ul>
@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             resultsContainer.innerHTML += `
             <div>
-                <h3>Question ${escapeHtml(segment.question_number)}: ${escapeHtml(result.marks_awarded)} / ${escapeHtml(result.marks_total)}</h3>
+                <h3>Question ${escapeHtml(segment.question_number)} <span class="markedScore">${escapeHtml(result.marks_awarded)}/${escapeHtml(result.marks_total)}</span></h3>
                 <p>${escapeHtml(result.overall_feedback)}</p>
             </div>
             `;
