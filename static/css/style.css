@@ -240,3 +240,37 @@ td {
 .dashboardCard p {
     margin-bottom: 0.4em;
 }
+
+.fieldGroup {
+    margin-bottom: 4px;
+}
+
+.radioRow {
+    display: flex;
+    gap: 24px;
+    margin: 8px 0 4px;
+}
+
+.radioRow label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    columns: var(--color-ink);
+    margin: 0;
+}
+
+.resultArea {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-rule);
+}
+
+#progressStatus {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--color-graphite);
+}

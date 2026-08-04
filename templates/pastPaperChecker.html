@@ -6,50 +6,64 @@
 <h1>Get Solved Past Papers Checked by AI</h1>
 
 {% if error %}
-<p style="color: red;"><strong>{{ error }}</strong></p>
+<p style="color: var(--color-red);"><strong>{{ error }}</strong></p>
 {% endif %}
 
 <form action="/past-paper-checker/submit" method="POST" enctype="multipart/form-data" id="pastPaperExaminerForm">
-    <label for="subjectName">Subject Name:</label>
-    <br>
-    <input type="text" name="subjectName" id="subjectName" placeholder="Physics" required>
-    <br><br>
-    <label for="subjectCode">Subject Code:</label>
-    <br>
-    <input type="number" name="subjectCode" id="subjectCode" placeholder="5054" required>
-    <br><br>
-    <label for="examinationYear">Examination Year:</label>
-    <br>
-    <input type="number" name="examinationYear" id="examinationYear" placeholder="2025" required>
-    <br><br>
-    <label for="examinationSeries">Examination Series:</label>
-    <br>
-    <select name="examinationSeries" id="examinationSeries">
-        <option value="may-june">May/June</option>
-        <option value="oct-nov">October/November</option>
-    </select><br><br>
 
-    <label for="variant">Variant:</label><br>
-    <input type="number" name="variant" value="11" required id="variant"><br><br>
-    <label>Question Scope:</label><br>
-    <input type="radio" name="questionScope" value="specific" checked id="scopeSpecific">
-    <label for="scopeSpecific">Specific Question</label><br>
-    <input type="radio" name="questionScope" id="scopeAll" value="all">
-    <label for="scopeAll">All Questions</label><br><br>
+    <div class="fieldGroup">
+        <label for="subjectName">Subject Name:</label>
+        <input type="text" name="subjectName" id="subjectName" placeholder="Physics" required>
+    </div>
 
-    <label for="questionNumber">Question Number (only required for specific question):</label>
-    <br>
-    <input type="text" name="questionNumber" placeholder="e.g. 4 or 4(b)(ii)" id="questionNumber">
-    <br><br>
+    <div class="fieldGroup">
+        <label for="subjectCode">Subject Code:</label>
+        <input type="number" name="subjectCode" id="subjectCode" placeholder="5054" required>
+    </div>
 
-    <label for="answerImages">Upload Answer Images:</label><br>
-    <input type="file" name="answerImages" id="answerImages" accept="image/*" multiple required> <br><br>
+    <div class="fieldGroup">
+        <label for="examinationYear">Examination Year:</label>
+        <input type="number" name="examinationYear" id="examinationYear" placeholder="2025" required>
+    </div>
+    
+    <div class="fieldGroup">
+        <label for="examinationSeries">Examination Series:</label>
+        <select name="examinationSeries" id="examinationSeries">
+            <option value="may-june">May/June</option>
+            <option value="oct-nov">October/November</option>
+        </select>
+    </div>
+
+    <div class="fieldGroup">
+        <label for="variant">Variant:</label>
+        <input type="number" name="variant" value="11" required id="variant">
+    </div>
+    <div class="fieldGroup">
+        <label>Question Scope:</label>
+        <div class="radioRow">
+            <label for="scopeSpecific"><input type="radio" name="questionScope" value="specific" checked id="scopeSpecific"> Specific Question</label>
+            <label for="scopeAll"><input type="radio" name="questionScope" value="all" id="scopeAll"> All Questions</label>
+        </div>
+    </div>
+
+    <div class="fieldGroup">
+        <label for="questionNumber">Question Number (only required for specific question)</label>
+        <input type="text" name="questionNumber" placeholder="e.g. 4 or 4(b)(ii)" id="questionNumber">
+    </div>
+
+    <div class="fieldGroup">
+        <label for="answerImages">Upload Answer Images</label>
+        <input type="file" name="answerImages" accept="image/*" multiple required id="answerImages">
+    </div>
 
     <button type="submit">Examine and Mark!</button>
 </form>
 
-<p id="progressStatus"></p>
-<div id="allQuestionsResults"></div>
+
+<div class="resultArea">
+    <p id="progressStatus"></p>
+    <div id="allQuestionsResults"></div>
+</div>
 
 <script src="{{ url_for('static', filename='js/gradeAllQuestions.js') }}"></script>
 {% endblock %}
