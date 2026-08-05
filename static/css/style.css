@@ -289,3 +289,157 @@ td {
     font-size: 0.9rem;
     color: var(--color-graphite);
 }
+
+.actionLink {
+    display: inline-block;
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    color: var(--color-ink);
+}
+
+.actionLink:hover, .actionLink:focus-visible {
+    background: var(--color-ink);
+    color: #FFFFFF;
+    border-bottom: 1px solid var(--color-ink);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.flashcardBox {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    min-height: 100px;
+    margin: 16px 0;
+    background: var(--color-bg);
+}
+
+.flashcardFront {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    margin: 0;
+}
+
+.flashcardBack {
+    font-family: var(--font-body);
+    color: var(--color-graphite);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-rule);
+}
+
+.cardCounter {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-graphite);
+    margin-bottom: 0;
+}
+
+.ratingRow {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.ratingRow button {
+    background: #FFFFFF;
+    margin-top: 0;
+}
+
+.ratingRow button[data-quality="1"] {
+    color: var(--color-red);
+    border: 1px solid var(--color-red);
+}
+
+.ratingRow button[data-quality="1"]:hover {
+    background: var(--color-red);
+    color: #FFFFFF;
+}
+
+.ratingRow button[data-quality="3"] {
+    color: var(--color-graphite);
+    border: 1px solid var(--color-graphite);
+}
+
+.ratingRow button[data-quality="3"]:hover {
+    background: var(--color-graphite);
+    color: #FFFFFF;
+}
+
+.ratingRow button[data-quality="4"] {
+    color: var(--color-ink);
+    border: 1px solid var(--color-ink);
+}
+
+.ratingRow button[data-quality="5"] {
+    color: var(--color-green);
+    border: 1px solid var(--color-green);
+}
+
+.ratingRow button[data-quality="5"]:hover {
+    background: var(--color-green);
+    color: #FFFFFF;
+}
+
+.generateForm {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-rule);
+    margin-bottom: 20px;
+}
+
+.generateForm .fieldGroup {
+    margin-bottom: 0;
+}
+
+.generateForm button {
+    margin-top: 0;
+}
+
+#generateStatus {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--color-graphite);
+}
+
+.questionCard {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.questionCard .questionMeta {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-graphite);
+    margin-bottom: 8px;
+}
+
+.questionCard .questionText {
+    font-family: var(--font-body);
+    margin-bottom: 16px;
+}
+
+.gradeResult {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-rule);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+}

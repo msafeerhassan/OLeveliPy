@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             const result = data.result;
-            resultDiv.innerHTML = `<p><strong>Score: ${escapeHtml(result.marks_awarded)}/${escapeHtml(result.marks_total)}</strong></p><p>${escapeHtml(result.overall_feedback)}</p>`;
+            resultDiv.innerHTML = `<p><span class="markedScore">${escapeHtml(result.marks_awarded)}/${escapeHtml(result.marks_total)}</span></p><p>${escapeHtml(result.overall_feedback)}</p>`;
         });
     });
 });

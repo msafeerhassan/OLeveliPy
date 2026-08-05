@@ -6,12 +6,12 @@
 <h1>Your Topic Breakdown</h1>
 
 {% if error %}
-<p style="color: red;"><strong>{{ error }}</strong></p>
+<p class="errorText">{{ error }}</p>
 {% endif %}
 
 {% if topics %}
 <p>Sorted weakest to strongest, based on questions graded.</p>
-<table border="1" cellpadding="6">
+<table>
     <tr>
         <th>Topic</th>
         <th>Score</th>
@@ -20,7 +20,7 @@
     {% for topic in topics %}
     <tr>
         <td>{{ topic.topic }}</td>
-        <td>{{ topic.percentage }}% ({{ topic.marksAwarded }}/{{ topic.marksTotal }})</td>
+        <td><span class="markedScore">{{ topic.percentage }}%</span> ({{ topic.marksAwarded }}/{{ topic.marksTotal }})</td>
         <td>{{ topic.questionCount }}</td>
     </tr>
     {% endfor %}
@@ -29,6 +29,6 @@
 <p>No data yet - start grading questions to see breakdown here.</p>
 {% endif %}
 
-<p><a href="/progress-report">Download Progress Report (PDF)</a></p>
+<p><a href="/progress-report" class="actionLink">Download Progress Report (PDF)</a></p>
 
 {% endblock %}

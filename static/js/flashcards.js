@@ -12,8 +12,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function showCard() {
         if (currentIdx >= cards.length) {
-            cardDisplay.style.display = "none";
-            noCardsMsg.style.display = "block";
+            cardDisplay.classList.add("hidden");
+            noCardsMsg.classList.remove("hidden");
             noCardsMsg.textContent = "You have reviewed all due cards for now. Come back later.";
             return;
         }
@@ -23,15 +23,15 @@ document.addEventListener("DOMContentLoaded", function () {
         cardCounter.textContent = `Card ${currentIdx + 1} of ${cards.length}`;
         cardFront.textContent = card.front;
         cardBack.textContent = card.back;
-        cardBack.style.display = "none";
-        ratingBtns.style.display = "none";
-        showAnswerBtn.style.display = "inline-block";
+        cardBack.classList.add("hidden");
+        ratingBtns.classList.add("hidden");
+        showAnswerBtn.classList.remove("hidden");
     }
 
     showAnswerBtn.addEventListener("click", function () {
-        cardBack.style.display = "block";
-        showAnswerBtn.style.display = "none";
-        ratingBtns.style.display = "block";
+        cardBack.classList.remove("hidden");
+        showAnswerBtn.classList.add("hidden");
+        ratingBtns.classList.remove("hidden");
     });
 
     ratingBtns.addEventListener("click", async function (event) {
@@ -64,9 +64,9 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     if (cards.length === 0) {
-        noCardsMsg.style.display = "block";
+        noCardsMsg.classList.remove("hidden");
     } else {
-        cardDisplay.style.display = "block";
+        cardDisplay.classList.remove("hidden");
         showCard();
     }
 });

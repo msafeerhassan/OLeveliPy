@@ -6,42 +6,45 @@
 <h1>Practice Questions</h1>
 
 {% if error %}
-<p style="color: red;"><strong>{{ error }}</strong></p>
+<p class="errorText">{{ error }}</p>
 {% endif %}
 
-<form id="generateForm">
-    <label for="subjectName">Subject:</label>
-    <input type="text" id="subjectName" placeholder="Physics" required>
-
-    <label for="subjectCode">Subject Code:</label>
-    <input type="text" placeholder="5054" required id="subjectCode">
-
-    <label for="topic">Topic:</label>
-    <input type="text" id="topic" placeholder="e.g. Space Physics..." required>
-
+<form id="generateForm" class="generateForm">
+    <div class="fieldGroup">
+        <label for="subjectName">Subject:</label>
+        <input type="text" id="subjectName" placeholder="Physics" required>
+    </div>
+    <div class="fieldGroup">
+        <label for="subjectCode">Subject Code:</label>
+        <input type="text" placeholder="5054" required id="subjectCode">
+    </div>
+    <div class="fieldGroup">
+        <label for="topic">Topic:</label>
+        <input type="text" id="topic" placeholder="e.g. Space Physics..." required>
+    </div>
     <button type="submit">Generate Question</button>
 </form>
 <p id="generateStatus"></p>
 
-<hr>
-
 <div id="questionsList">
     {% for q in questions %}
-    <div class="practice-question" data-question-id="{{ q.id }}">
-        <p><strong>{{ q.subject_name }} - {{ q.topic }}</strong> ({{ q.marks_total }} marks)</p>
-
-        <p>{{ q.question_text }}</p>
+    <div class="questionCard practice-question" data-question-id="{{ q.id }}">
+        <p class="questionMeta">{{ q.subject_name }} &middot; {{ q.topic }} &middot; {{ q.marks_total }} marks</p>
+        <p class="questionText">{{ q.question_text }}</p>
         <form class="gradeForm">
             <input type="hidden" class="questionIdInput" value="{{ q.id }}">
-            <label>Type your answer:</label><br>
-            <textarea rows="4" style="width: 100%;" class="answerTextInput" placeholder="Type your answer here..."></textarea><br><br>
-            <label>Or upload a photo of your handwritten answer:</label><br>
-            <input type="file" accept="image/*" multiple class="answerImageInput"><br><br>
+            <div class="fieldGroup">
+                <label>Type your answer:</label>
+                <textarea rows="4" style="width: 100%;" class="answerTextInput" placeholder="Type your answer here..."></textarea>
+            </div>
+            <div class="fieldGroup">
+                <label>Or upload a photo of your handwritten answer:</label>
+                <input type="file" accept="image/*" multiple class="answerImageInput">
+            </div>
             <button type="submit">Submit Answer</button>
         </form>
         <div class="gradeResult"></div>
     </div>
-    <hr>
     {% endfor %}
 </div>
 

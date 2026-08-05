@@ -6,11 +6,11 @@
 <h1>Your Grading History</h1>
 
 {% if error %}
-<p style="color: red;"><strong>{{ error }}</strong></p>
+<p class="errorText">{{ error }}</p>
 {% endif %}
 
 {% if history %}
-<table border="1" cellpadding="6">
+<table>
     <tr>
         <th>Date</th>
         <th>Subject</th>
@@ -25,7 +25,7 @@
         <td>{{ entry.subject_name }} ({{ entry.subject_code }})</td>
         <td>{{ entry.examination_year }} {{ entry.examination_series }}, variant {{ entry.variant }}</td>
         <td>{{ entry.question_number }}</td>
-        <td>{{ entry.marks_awarded }} / {{ entry.marks_total }}</td>
+        <td><span class="markedScore">{{ entry.marks_awarded }}/{{ entry.marks_total }}</span></td>
         <td><a href="/coach-chat?about={{ entry.id }}">Ask Coach</a></td>
     </tr>
     {% endfor %}
