@@ -21,7 +21,7 @@
 14. Modern and Responsive Design
 
 #### How to test it online:
-Here it is: []()
+Here it is: [OLeveliPy Demo](https://olevelipy.vercel.app/)
 
 #### How to use it locally:
 1. Clone the repository and open the project folder.
@@ -35,3 +35,6 @@ Here it is: []()
 9. Enjoy :)
 
 #### Screenshots
+<img width="1179" height="640" alt="Screenshot 2026-08-06 150121" src="https://github.com/user-attachments/assets/d6d57a54-c424-434b-b264-2139b75dab3c" />
+<img width="1134" height="786" alt="Screenshot 2026-08-06 150057" src="https://github.com/user-attachments/assets/d5165588-f3a1-4d12-b89b-5b558143befe" />
+<img width="1167" height="843" alt="Screenshot 2026-08-06 150045" src="https://github.com/user-attachments/assets/c3b4ded5-28ff-463c-8081-b796b0e00e9d" />
