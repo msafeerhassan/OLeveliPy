@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const data = await response.json();
 
             if (!data.status) {
-                resultDiv.textContent = "Failed: " + escapeHtml(data.result);
+                resultDiv.textContent = `<p class="errorText">Failed: ${escapeHtml(data.result)}</p>`;
                 return;
             }
 

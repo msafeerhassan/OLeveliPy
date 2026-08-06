@@ -6,18 +6,18 @@
 <h1>Chat with Your AI Coach</h1>
 
 {% if error %}
-<p style="color: red;"><strong>{{ error }}</strong></p>
+<p class="errorText">{{ error }}</p>
 {% endif %}
 
-<div id="chatMessages" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+<div id="chatMessages" class="chatWindow">
     {% for msg in chatHistory %}
     <div class="chat-message chat-{{ msg.role }}">
-        <strong>{{ "You" if msg.role == "user" else "Coach" }}:</strong> {{ msg.content }}
+        <strong>{{ "You" if msg.role == "user" else "Coach" }}</strong>{{ msg.content }}
     </div>
     {% endfor %}
 </div>
 
-<form id="chatForm">
+<form id="chatForm" class="chatInputRow">
     <input type="text" placeholder="Ask your coach anything..." required autocomplete="off" id="chatInput">
     <button type="submit">Send</button>
 </form>

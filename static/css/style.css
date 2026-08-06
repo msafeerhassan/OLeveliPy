@@ -443,3 +443,69 @@ td {
     font-family: var(--font-body);
     font-size: 0.92rem;
 }
+
+.chatWindow {
+    max-height: 440px;
+    overflow-y: auto;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-message {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 0.94rem;
+    line-height: 1.5;
+}
+
+.chat-message strong {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.chat-user {
+    align-self: flex-end;
+    background: var(--color-ink);
+    color: #FFFFFF;
+}
+
+.chat-user strong {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.chat-assistant {
+    align-self: flex-start;
+    background: #FFFFFF;
+    border: 1px solid var(--color-rule);
+    color: var(--color-ink);
+}
+
+.chat-assistant strong {
+    color: var(--color-red);
+}
+
+.chatInputRow {
+    display: flex;
+    gap: 10px;
+}
+
+.chatInputRow input[type="text"] {
+    flex: 1;
+    max-width: none;
+}
+
+.chatInputRow button {
+    margin-top: 0;
+}

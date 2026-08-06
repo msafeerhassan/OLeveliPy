@@ -13,12 +13,8 @@ document.addEventListener("DOMContentLoaded", function () {
         div.className = `chat-message chat-${role}`;
 
         const label = document.createElement("strong");
-        if (role === "user") {
-            label.textContent = "You: ";
-        }
-        else {
-            label.textContent = "Coach: ";
-        }
+
+        label.textContent = role === "user" ? "You" : "Coach";
 
         div.appendChild(label);
         div.appendChild(document.createTextNode(content));

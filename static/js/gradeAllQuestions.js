@@ -114,14 +114,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     })
                 });
             } catch (err) {
-                resultsContainer.innerHTML += `<p>Question ${escapeHtml(segment.question_number)}: request failed (${escapeHtml(err)})</p>`;
+                resultsContainer.innerHTML += `<p class="errorText">Question ${escapeHtml(segment.question_number)}: request failed (${escapeHtml(err)})</p>`;
                 continue;
             }
 
             const gradeData = await gradeResponse.json();
 
             if (!gradeData.status) {
-                resultsContainer.innerHTML += `<p>Question ${escapeHtml(segment.question_number)}: grading failed (${escapeHtml(gradeData.result)})</p>`;
+                resultsContainer.innerHTML += `<p class="errorText">Question ${escapeHtml(segment.question_number)}: grading failed (${escapeHtml(gradeData.result)})</p>`;
                 continue;
             }
 
